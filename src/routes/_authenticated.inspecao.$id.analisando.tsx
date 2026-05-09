@@ -26,6 +26,7 @@ function AnalisandoPage() {
   const [etapa, setEtapa] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
   const ranRef = useRef(false);
+  const canceladoRef = useRef(false);
 
   useEffect(() => {
     if (ranRef.current) return;
@@ -43,13 +44,17 @@ function AnalisandoPage() {
         const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
           body: { inspecao_id: id },
         });
+        if (canceladoRef.current) return;
         if (error) throw error;
         if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
         setProgresso(100);
         setEtapa(ETAPAS.length - 1);
         toast.success("Análise concluída");
-        setTimeout(() => navigate({ to: "/inspecao/$id/resultado", params: { id } }), 350);
+        setTimeout(() => {
+          if (!canceladoRef.current) navigate({ to: "/inspecao/$id/resultado", params: { id } });
+        }, 350);
       } catch (e) {
+        if (canceladoRef.current) return;
         setErro(e instanceof Error ? e.message : "Erro na análise");
       } finally {
         clearInterval(tickProg);
@@ -62,6 +67,12 @@ function AnalisandoPage() {
       clearInterval(tickEtapa);
     };
   }, [id, navigate]);
+
+  const cancelar = () => {
+    canceladoRef.current = true;
+    toast.info("Análise cancelada");
+    navigate({ to: "/inspecao/$id/observacoes", params: { id } });
+  };
 
   return (
     <AppShell title="Analisando">
@@ -89,6 +100,10 @@ function AnalisandoPage() {
                 <span>{ETAPAS[etapa]}</span>
               </div>
             </div>
+
+            <Button variant="outline" onClick={cancelar} className="mt-2 w-full max-w-sm">
+              Cancelar análise
+            </Button>
           </>
         ) : (
           <>
