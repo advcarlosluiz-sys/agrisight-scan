@@ -133,6 +133,61 @@ function Kpi({ label, value, tone }: { label: string; value: number; tone: "prim
     </div>
   );
 }
+
+type KpiTone = "neutral" | "muted" | "primary" | "success" | "destructive";
+function KpiProc({
+  label,
+  value,
+  ativo,
+  onClick,
+  tone,
+}: {
+  label: string;
+  value: number;
+  ativo: boolean;
+  onClick: () => void;
+  tone: KpiTone;
+}) {
+  const tones: Record<KpiTone, { idle: string; ativo: string; valor: string }> = {
+    neutral: {
+      idle: "bg-card",
+      ativo: "bg-foreground text-background border-foreground",
+      valor: "text-foreground",
+    },
+    muted: {
+      idle: "bg-card",
+      ativo: "bg-muted border-foreground/30",
+      valor: "text-foreground",
+    },
+    primary: {
+      idle: "bg-card",
+      ativo: "bg-primary/15 border-primary",
+      valor: "text-primary",
+    },
+    success: {
+      idle: "bg-card",
+      ativo: "bg-emerald-500/15 border-emerald-500",
+      valor: "text-emerald-600 dark:text-emerald-400",
+    },
+    destructive: {
+      idle: "bg-card",
+      ativo: "bg-destructive/15 border-destructive",
+      valor: "text-destructive",
+    },
+  };
+  const t = tones[tone];
+  return (
+    <button
+      onClick={onClick}
+      className={`flex min-w-[7.5rem] shrink-0 flex-col items-start gap-0.5 rounded-2xl border p-3 text-left shadow-card transition active:scale-[0.98] ${
+        ativo ? t.ativo : `${t.idle} border-border`
+      }`}
+    >
+      <span className={`text-2xl font-bold ${ativo ? "" : t.valor}`}>{value}</span>
+      <span className="text-[11px] uppercase tracking-wide opacity-80">{label}</span>
+    </button>
+  );
+}
 function Legend({ dot, label }: { dot: string; label: string }) {
   return <span className="flex items-center gap-1"><span className={`h-3 w-3 rounded-sm ${dot}`} />{label}</span>;
 }
