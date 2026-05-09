@@ -61,6 +61,10 @@ function ObsPage() {
 
   return (
     <AppShell title="Observações" back={true}>
+      <div className="mb-3 flex items-center justify-between rounded-xl border bg-card px-3 py-2">
+        <span className="text-xs text-muted-foreground">Status da inspeção</span>
+        <StatusProcessoBadge status={statusProcesso} />
+      </div>
       <div className="space-y-2 rounded-2xl border bg-card p-4">
         {OBS.map(([k, label]) => (
           <label key={k} className="flex items-center gap-3 rounded-lg p-2 active:bg-muted">
