@@ -64,7 +64,7 @@ function AnalisandoPage() {
   }, [id, navigate]);
 
   return (
-    <AppShell title="Analisando" back={false}>
+    <AppShell title="Analisando">
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-2 text-center">
         {!erro ? (
           <>
