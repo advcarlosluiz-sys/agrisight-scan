@@ -28,6 +28,7 @@ function AnalisandoPage() {
   const [erro, setErro] = useState<string | null>(null);
   const ranRef = useRef(false);
   const canceladoRef = useRef(false);
+  const statusProcesso = useStatusProcesso(id);
 
   useEffect(() => {
     if (ranRef.current) return;
