@@ -45,17 +45,9 @@ function ObsPage() {
         .eq("id", id);
       if (uErr) throw uErr;
 
-      toast.info("Analisando com IA...", { duration: 8000 });
-      const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
-        body: { inspecao_id: id },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      toast.success("Análise concluída");
-      navigate({ to: "/inspecao/$id/resultado", params: { id } });
+      navigate({ to: "/inspecao/$id/analisando", params: { id } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro na análise");
-    } finally {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
       setBusy(false);
     }
   };
