@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { StatusPill, STATUS_DOT } from "@/components/status-pill";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
 import { supabase } from "@/integrations/supabase/client";
+import { usePersistedFilter } from "@/hooks/use-persisted-filter";
 import { cn } from "@/lib/utils";
 
 type Filtro = "todos" | StatusProcesso;
@@ -32,6 +33,7 @@ const FILTROS: { id: Filtro; label: string }[] = [
 function Dashboard() {
   const { filtro } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
+  usePersistedFilter("dashboard:filtro", filtro, "todos", "/dashboard");
   const setFiltro = (f: Filtro) =>
     navigate({ search: { filtro: f }, replace: true });
   const { data: inspecoes } = useQuery({

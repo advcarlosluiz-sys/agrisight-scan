@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { StatusPill } from "@/components/status-pill";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
 import { supabase } from "@/integrations/supabase/client";
+import { usePersistedFilter } from "@/hooks/use-persisted-filter";
 import { cn } from "@/lib/utils";
 
 type Filtro = "todos" | StatusProcesso;
@@ -33,6 +34,7 @@ const FILTROS: { id: Filtro; label: string }[] = [
 function HistoricoPage() {
   const { filtro } = Route.useSearch();
   const navigate = useNavigate({ from: "/historico" });
+  usePersistedFilter("historico:filtro", filtro, "todos", "/historico");
   const setFiltro = (f: Filtro) =>
     navigate({ search: { filtro: f }, replace: true });
 
