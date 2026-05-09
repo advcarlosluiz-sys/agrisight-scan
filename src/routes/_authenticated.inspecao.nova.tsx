@@ -1,0 +1,113 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AppShell } from "@/components/app-shell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/_authenticated/inspecao/nova")({
+  component: NovaInspecao,
+});
+
+function NovaInspecao() {
+  const navigate = useNavigate();
+  const [produtorId, setProdutorId] = useState<string>("");
+  const [propriedadeId, setPropriedadeId] = useState<string>("");
+  const [canteiroId, setCanteiroId] = useState<string>("");
+  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  const [busy, setBusy] = useState(false);
+
+  const { data: produtores } = useQuery({
+    queryKey: ["produtores"],
+    queryFn: async () => (await supabase.from("produtores").select("id, nome").order("nome")).data ?? [],
+  });
+  const { data: propriedades } = useQuery({
+    queryKey: ["propriedades", produtorId],
+    enabled: !!produtorId,
+    queryFn: async () =>
+      (await supabase.from("propriedades").select("id, nome").eq("produtor_id", produtorId).order("nome")).data ?? [],
+  });
+  const { data: canteiros } = useQuery({
+    queryKey: ["canteiros", propriedadeId],
+    enabled: !!propriedadeId,
+    queryFn: async () =>
+      (await supabase.from("canteiros").select("id, nome, variedade").eq("propriedade_id", propriedadeId).order("nome")).data ?? [],
+  });
+
+  const iniciar = async () => {
+    if (!canteiroId) return toast.error("Selecione canteiro");
+    setBusy(true);
+    try {
+      const orgRes = await supabase.rpc("current_org_id");
+      const { data: u } = await supabase.auth.getUser();
+      const { data: insp, error } = await supabase
+        .from("inspecoes")
+        .insert({
+          organizacao_id: orgRes.data!,
+          propriedade_id: propriedadeId,
+          canteiro_id: canteiroId,
+          vistoriador_id: u.user?.id,
+          data_inspecao: data,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      navigate({ to: "/inspecao/$id/qr", params: { id: insp.id } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <AppShell title="Nova Inspeção" back="/">
+      <div className="space-y-4">
+        <Field label="Produtor">
+          <Select value={produtorId} onValueChange={(v) => { setProdutorId(v); setPropriedadeId(""); setCanteiroId(""); }}>
+            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+            <SelectContent>
+              {produtores?.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Propriedade">
+          <Select value={propriedadeId} onValueChange={(v) => { setPropriedadeId(v); setCanteiroId(""); }} disabled={!produtorId}>
+            <SelectTrigger><SelectValue placeholder={produtorId ? "Selecione..." : "Escolha um produtor antes"} /></SelectTrigger>
+            <SelectContent>
+              {propriedades?.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Canteiro">
+          <Select value={canteiroId} onValueChange={setCanteiroId} disabled={!propriedadeId}>
+            <SelectTrigger><SelectValue placeholder={propriedadeId ? "Selecione..." : "Escolha uma propriedade antes"} /></SelectTrigger>
+            <SelectContent>
+              {canteiros?.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome} {c.variedade ? `· ${c.variedade}` : ""}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Data da inspeção">
+          <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
+        </Field>
+
+        <Button className="h-12 w-full text-base" onClick={iniciar} disabled={busy || !canteiroId}>
+          Iniciar Inspeção
+        </Button>
+      </div>
+    </AppShell>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}
