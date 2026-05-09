@@ -113,7 +113,7 @@ ${imageContents.length ? `${imageContents.length} foto(s) anexada(s).` : "Sem fo
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "openai/gpt-5-mini",
         messages: [
           { role: "system", content: systemPrompt },
           {
