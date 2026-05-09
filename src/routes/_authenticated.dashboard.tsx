@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { AppShell } from "@/components/app-shell";
+import { CopyFilterLinkButton } from "@/components/copy-filter-link-button";
 import { StatusPill, STATUS_DOT } from "@/components/status-pill";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,9 +64,12 @@ function Dashboard() {
 
   return (
     <AppShell title="Dashboard" back="/">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Status do processo
-      </h3>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Status do processo
+        </h3>
+        <CopyFilterLinkButton />
+      </div>
       <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
         <KpiProc label="Todos" value={cntProc("todos")} ativo={filtro === "todos"} onClick={() => setFiltro("todos")} tone="neutral" />
         <KpiProc label="Em andamento" value={cntProc("em_andamento")} ativo={filtro === "em_andamento"} onClick={() => setFiltro("em_andamento")} tone="muted" />

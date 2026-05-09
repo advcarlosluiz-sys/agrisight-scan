@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { AppShell } from "@/components/app-shell";
+import { CopyFilterLinkButton } from "@/components/copy-filter-link-button";
 import { StatusPill } from "@/components/status-pill";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +64,9 @@ function HistoricoPage() {
 
   return (
     <AppShell title="Histórico" back="/">
+      <div className="mb-3 flex justify-end">
+        <CopyFilterLinkButton />
+      </div>
       <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
         {FILTROS.map((f) => {
           const ativo = filtro === f.id;
