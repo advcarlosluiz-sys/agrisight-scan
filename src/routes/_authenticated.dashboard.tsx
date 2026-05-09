@@ -1,0 +1,95 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { AppShell } from "@/components/app-shell";
+import { StatusPill, STATUS_DOT } from "@/components/status-pill";
+import { supabase } from "@/integrations/supabase/client";
+
+export const Route = createFileRoute("/_authenticated/dashboard")({
+  component: Dashboard,
+});
+
+function Dashboard() {
+  const { data: inspecoes } = useQuery({
+    queryKey: ["dash-inspecoes"],
+    queryFn: async () =>
+      (await supabase.from("inspecoes").select("id, status_geral, data_inspecao, setor:setor_id(codigo)").order("created_at", { ascending: false }).limit(20)).data ?? [],
+  });
+  const { data: setores } = useQuery({
+    queryKey: ["dash-setores"],
+    queryFn: async () =>
+      (await supabase.from("setores").select("id, codigo, status_atual, canteiro:canteiro_id(nome)").order("codigo")).data ?? [],
+  });
+  const { data: tarefas } = useQuery({
+    queryKey: ["dash-tarefas"],
+    queryFn: async () =>
+      (await supabase.from("tarefas_recomendadas").select("id, titulo, prioridade, status").eq("status", "pendente").limit(5)).data ?? [],
+  });
+
+  const total = inspecoes?.length ?? 0;
+  const cnt = (s: string) => inspecoes?.filter((i: any) => i.status_geral === s).length ?? 0;
+
+  return (
+    <AppShell title="Dashboard" back="/">
+      <div className="grid grid-cols-2 gap-2">
+        <Kpi label="Total de inspeções" value={total} tone="primary" />
+        <Kpi label="Críticos" value={cnt("critico")} tone="destructive" />
+        <Kpi label="Em atenção" value={cnt("atencao")} tone="warning" />
+        <Kpi label="Normais" value={cnt("normal")} tone="success" />
+      </div>
+
+      <h3 className="mt-5 mb-2 text-sm font-semibold">Mapa do canteiro</h3>
+      <div className="rounded-2xl border bg-card p-3 shadow-card">
+        <div className="grid grid-cols-5 gap-1.5">
+          {setores?.slice(0, 25).map((s: any) => (
+            <div key={s.id} className={`flex aspect-square items-center justify-center rounded-md text-[10px] font-semibold text-white ${STATUS_DOT[s.status_atual] ?? "bg-muted text-muted-foreground"}`}>
+              {s.codigo}
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+          <Legend dot="bg-success" label="Normal" />
+          <Legend dot="bg-warning" label="Atenção" />
+          <Legend dot="bg-destructive" label="Crítico" />
+          <Legend dot="bg-muted" label="Não vistoriado" />
+        </div>
+      </div>
+
+      <h3 className="mt-5 mb-2 text-sm font-semibold">Últimas inspeções</h3>
+      <div className="space-y-2">
+        {inspecoes?.slice(0, 5).map((i: any) => (
+          <Link key={i.id} to="/inspecao/$id/resultado" params={{ id: i.id }} className="flex items-center justify-between rounded-xl border bg-card p-3">
+            <span className="text-sm">Setor {i.setor?.codigo ?? "—"} · {new Date(i.data_inspecao).toLocaleDateString("pt-BR")}</span>
+            <StatusPill status={i.status_geral} />
+          </Link>
+        ))}
+      </div>
+
+      {tarefas && tarefas.length > 0 && (
+        <>
+          <h3 className="mt-5 mb-2 text-sm font-semibold">Tarefas recomendadas</h3>
+          <div className="space-y-2">
+            {tarefas.map((t: any) => (
+              <div key={t.id} className="rounded-xl border bg-card p-3 text-sm">
+                <p className="font-medium">{t.titulo}</p>
+                <p className="text-xs capitalize text-muted-foreground">Prioridade: {t.prioridade}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </AppShell>
+  );
+}
+
+function Kpi({ label, value, tone }: { label: string; value: number; tone: "primary" | "destructive" | "warning" | "success" }) {
+  const cls = { primary: "bg-primary text-primary-foreground", destructive: "bg-destructive/10 text-destructive", warning: "bg-warning/15 text-warning-foreground", success: "bg-success/15 text-success" }[tone];
+  return (
+    <div className={`rounded-2xl p-4 shadow-card ${cls}`}>
+      <p className="text-xs uppercase opacity-90">{label}</p>
+      <p className="text-2xl font-bold">{value}</p>
+    </div>
+  );
+}
+function Legend({ dot, label }: { dot: string; label: string }) {
+  return <span className="flex items-center gap-1"><span className={`h-3 w-3 rounded-sm ${dot}`} />{label}</span>;
+}

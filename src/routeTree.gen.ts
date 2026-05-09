@@ -12,7 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
+import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated.historico'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated.configuracoes'
+import { Route as AuthenticatedRelatorioIdRouteImport } from './routes/_authenticated.relatorio.$id'
 import { Route as AuthenticatedInspecaoNovaRouteImport } from './routes/_authenticated.inspecao.nova'
+import { Route as AuthenticatedInspecaoIdResultadoRouteImport } from './routes/_authenticated.inspecao.$id.resultado'
 import { Route as AuthenticatedInspecaoIdQrRouteImport } from './routes/_authenticated.inspecao.$id.qr'
 import { Route as AuthenticatedInspecaoIdObservacoesRouteImport } from './routes/_authenticated.inspecao.$id.observacoes'
 import { Route as AuthenticatedInspecaoIdSetorSidRouteImport } from './routes/_authenticated.inspecao.$id.setor.$sid'
@@ -31,10 +36,38 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedConfiguracoesRoute =
+  AuthenticatedConfiguracoesRouteImport.update({
+    id: '/configuracoes',
+    path: '/configuracoes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedRelatorioIdRoute =
+  AuthenticatedRelatorioIdRouteImport.update({
+    id: '/relatorio/$id',
+    path: '/relatorio/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedInspecaoNovaRoute =
   AuthenticatedInspecaoNovaRouteImport.update({
     id: '/inspecao/nova',
     path: '/inspecao/nova',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedInspecaoIdResultadoRoute =
+  AuthenticatedInspecaoIdResultadoRouteImport.update({
+    id: '/inspecao/$id/resultado',
+    path: '/inspecao/$id/resultado',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedInspecaoIdQrRoute =
@@ -59,27 +92,42 @@ const AuthenticatedInspecaoIdSetorSidRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
   '/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
+  '/relatorio/$id': typeof AuthenticatedRelatorioIdRoute
   '/inspecao/$id/observacoes': typeof AuthenticatedInspecaoIdObservacoesRoute
   '/inspecao/$id/qr': typeof AuthenticatedInspecaoIdQrRoute
+  '/inspecao/$id/resultado': typeof AuthenticatedInspecaoIdResultadoRoute
   '/inspecao/$id/setor/$sid': typeof AuthenticatedInspecaoIdSetorSidRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
   '/': typeof AuthenticatedIndexRoute
   '/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
+  '/relatorio/$id': typeof AuthenticatedRelatorioIdRoute
   '/inspecao/$id/observacoes': typeof AuthenticatedInspecaoIdObservacoesRoute
   '/inspecao/$id/qr': typeof AuthenticatedInspecaoIdQrRoute
+  '/inspecao/$id/resultado': typeof AuthenticatedInspecaoIdResultadoRoute
   '/inspecao/$id/setor/$sid': typeof AuthenticatedInspecaoIdSetorSidRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
+  '/_authenticated/relatorio/$id': typeof AuthenticatedRelatorioIdRoute
   '/_authenticated/inspecao/$id/observacoes': typeof AuthenticatedInspecaoIdObservacoesRoute
   '/_authenticated/inspecao/$id/qr': typeof AuthenticatedInspecaoIdQrRoute
+  '/_authenticated/inspecao/$id/resultado': typeof AuthenticatedInspecaoIdResultadoRoute
   '/_authenticated/inspecao/$id/setor/$sid': typeof AuthenticatedInspecaoIdSetorSidRoute
 }
 export interface FileRouteTypes {
@@ -87,26 +135,41 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/configuracoes'
+    | '/dashboard'
+    | '/historico'
     | '/inspecao/nova'
+    | '/relatorio/$id'
     | '/inspecao/$id/observacoes'
     | '/inspecao/$id/qr'
+    | '/inspecao/$id/resultado'
     | '/inspecao/$id/setor/$sid'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/configuracoes'
+    | '/dashboard'
+    | '/historico'
     | '/'
     | '/inspecao/nova'
+    | '/relatorio/$id'
     | '/inspecao/$id/observacoes'
     | '/inspecao/$id/qr'
+    | '/inspecao/$id/resultado'
     | '/inspecao/$id/setor/$sid'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/configuracoes'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/historico'
     | '/_authenticated/'
     | '/_authenticated/inspecao/nova'
+    | '/_authenticated/relatorio/$id'
     | '/_authenticated/inspecao/$id/observacoes'
     | '/_authenticated/inspecao/$id/qr'
+    | '/_authenticated/inspecao/$id/resultado'
     | '/_authenticated/inspecao/$id/setor/$sid'
   fileRoutesById: FileRoutesById
 }
@@ -138,11 +201,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/historico': {
+      id: '/_authenticated/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/relatorio/$id': {
+      id: '/_authenticated/relatorio/$id'
+      path: '/relatorio/$id'
+      fullPath: '/relatorio/$id'
+      preLoaderRoute: typeof AuthenticatedRelatorioIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/inspecao/nova': {
       id: '/_authenticated/inspecao/nova'
       path: '/inspecao/nova'
       fullPath: '/inspecao/nova'
       preLoaderRoute: typeof AuthenticatedInspecaoNovaRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/inspecao/$id/resultado': {
+      id: '/_authenticated/inspecao/$id/resultado'
+      path: '/inspecao/$id/resultado'
+      fullPath: '/inspecao/$id/resultado'
+      preLoaderRoute: typeof AuthenticatedInspecaoIdResultadoRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/inspecao/$id/qr': {
@@ -170,19 +268,29 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedInspecaoNovaRoute: typeof AuthenticatedInspecaoNovaRoute
+  AuthenticatedRelatorioIdRoute: typeof AuthenticatedRelatorioIdRoute
   AuthenticatedInspecaoIdObservacoesRoute: typeof AuthenticatedInspecaoIdObservacoesRoute
   AuthenticatedInspecaoIdQrRoute: typeof AuthenticatedInspecaoIdQrRoute
+  AuthenticatedInspecaoIdResultadoRoute: typeof AuthenticatedInspecaoIdResultadoRoute
   AuthenticatedInspecaoIdSetorSidRoute: typeof AuthenticatedInspecaoIdSetorSidRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedInspecaoNovaRoute: AuthenticatedInspecaoNovaRoute,
+  AuthenticatedRelatorioIdRoute: AuthenticatedRelatorioIdRoute,
   AuthenticatedInspecaoIdObservacoesRoute:
     AuthenticatedInspecaoIdObservacoesRoute,
   AuthenticatedInspecaoIdQrRoute: AuthenticatedInspecaoIdQrRoute,
+  AuthenticatedInspecaoIdResultadoRoute: AuthenticatedInspecaoIdResultadoRoute,
   AuthenticatedInspecaoIdSetorSidRoute: AuthenticatedInspecaoIdSetorSidRoute,
 }
 
@@ -197,3 +305,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
