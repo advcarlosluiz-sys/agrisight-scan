@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,8 +32,12 @@ function ObsPage() {
   const [nota, setNota] = useState("");
   const [outros, setOutros] = useState(false);
   const [busy, setBusy] = useState(false);
+  const lockRef = useRef(false);
 
   const analisar = async () => {
+    // Guarda síncrona contra cliques múltiplos rápidos (antes do re-render)
+    if (lockRef.current || busy) return;
+    lockRef.current = true;
     setBusy(true);
     try {
       const updates: Record<string, boolean | string | null> = { observacao_manual: nota };
@@ -46,8 +50,10 @@ function ObsPage() {
       if (uErr) throw uErr;
 
       navigate({ to: "/inspecao/$id/analisando", params: { id } });
+      // Mantém o lock ativo — a navegação desmonta esta tela
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");
+      lockRef.current = false;
       setBusy(false);
     }
   };
