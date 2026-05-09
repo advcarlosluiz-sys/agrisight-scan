@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
+import { StatusProcessoBadge, useStatusProcesso } from "@/components/status-processo-badge";
 
 const OBS = [
   ["mato_alto", "Mato alto"],
