@@ -1,18 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { StatusPill, STATUS_DOT } from "@/components/status-pill";
+import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
+type Filtro = "todos" | StatusProcesso;
+const FILTROS: { id: Filtro; label: string }[] = [
+  { id: "todos", label: "Todas" },
+  { id: "em_andamento", label: "Em andamento" },
+  { id: "analisando", label: "Analisando" },
+  { id: "concluida", label: "Concluídas" },
+  { id: "cancelada", label: "Canceladas" },
+];
+
 function Dashboard() {
+  const [filtro, setFiltro] = useState<Filtro>("todos");
   const { data: inspecoes } = useQuery({
     queryKey: ["dash-inspecoes"],
     queryFn: async () =>
-      (await supabase.from("inspecoes").select("id, status_geral, data_inspecao, setor:setor_id(codigo)").order("created_at", { ascending: false }).limit(20)).data ?? [],
+      (await supabase.from("inspecoes").select("id, status_geral, status_processo, data_inspecao, setor:setor_id(codigo)").order("created_at", { ascending: false }).limit(20)).data ?? [],
   });
   const { data: setores } = useQuery({
     queryKey: ["dash-setores"],
