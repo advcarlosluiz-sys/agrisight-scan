@@ -34,6 +34,7 @@ function ObsPage() {
   const [outros, setOutros] = useState(false);
   const [busy, setBusy] = useState(false);
   const lockRef = useRef(false);
+  const statusProcesso = useStatusProcesso(id);
 
   const analisar = async () => {
     // Guarda síncrona contra cliques múltiplos rápidos (antes do re-render)
