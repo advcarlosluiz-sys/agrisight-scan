@@ -1,17 +1,26 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { AppShell } from "@/components/app-shell";
 import { StatusPill, STATUS_DOT } from "@/components/status-pill";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/dashboard")({
-  component: Dashboard,
+type Filtro = "todos" | StatusProcesso;
+
+const dashboardSearchSchema = z.object({
+  filtro: fallback(
+    z.enum(["todos", "em_andamento", "analisando", "concluida", "cancelada"]),
+    "todos",
+  ).default("todos"),
 });
 
-type Filtro = "todos" | StatusProcesso;
+export const Route = createFileRoute("/_authenticated/dashboard")({
+  validateSearch: zodValidator(dashboardSearchSchema),
+  component: Dashboard,
+});
 const FILTROS: { id: Filtro; label: string }[] = [
   { id: "todos", label: "Todas" },
   { id: "em_andamento", label: "Em andamento" },
@@ -21,7 +30,10 @@ const FILTROS: { id: Filtro; label: string }[] = [
 ];
 
 function Dashboard() {
-  const [filtro, setFiltro] = useState<Filtro>("todos");
+  const { filtro } = Route.useSearch();
+  const navigate = useNavigate({ from: "/dashboard" });
+  const setFiltro = (f: Filtro) =>
+    navigate({ search: { filtro: f }, replace: true });
   const { data: inspecoes } = useQuery({
     queryKey: ["dash-inspecoes"],
     queryFn: async () =>
