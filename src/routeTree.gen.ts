@@ -13,6 +13,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
 import { Route as AuthenticatedInspecaoNovaRouteImport } from './routes/_authenticated.inspecao.nova'
+import { Route as AuthenticatedInspecaoIdQrRouteImport } from './routes/_authenticated.inspecao.$id.qr'
+import { Route as AuthenticatedInspecaoIdObservacoesRouteImport } from './routes/_authenticated.inspecao.$id.observacoes'
+import { Route as AuthenticatedInspecaoIdSetorSidRouteImport } from './routes/_authenticated.inspecao.$id.setor.$sid'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -34,16 +37,40 @@ const AuthenticatedInspecaoNovaRoute =
     path: '/inspecao/nova',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedInspecaoIdQrRoute =
+  AuthenticatedInspecaoIdQrRouteImport.update({
+    id: '/inspecao/$id/qr',
+    path: '/inspecao/$id/qr',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedInspecaoIdObservacoesRoute =
+  AuthenticatedInspecaoIdObservacoesRouteImport.update({
+    id: '/inspecao/$id/observacoes',
+    path: '/inspecao/$id/observacoes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedInspecaoIdSetorSidRoute =
+  AuthenticatedInspecaoIdSetorSidRouteImport.update({
+    id: '/inspecao/$id/setor/$sid',
+    path: '/inspecao/$id/setor/$sid',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
+  '/inspecao/$id/observacoes': typeof AuthenticatedInspecaoIdObservacoesRoute
+  '/inspecao/$id/qr': typeof AuthenticatedInspecaoIdQrRoute
+  '/inspecao/$id/setor/$sid': typeof AuthenticatedInspecaoIdSetorSidRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/': typeof AuthenticatedIndexRoute
   '/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
+  '/inspecao/$id/observacoes': typeof AuthenticatedInspecaoIdObservacoesRoute
+  '/inspecao/$id/qr': typeof AuthenticatedInspecaoIdQrRoute
+  '/inspecao/$id/setor/$sid': typeof AuthenticatedInspecaoIdSetorSidRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -51,18 +78,36 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
+  '/_authenticated/inspecao/$id/observacoes': typeof AuthenticatedInspecaoIdObservacoesRoute
+  '/_authenticated/inspecao/$id/qr': typeof AuthenticatedInspecaoIdQrRoute
+  '/_authenticated/inspecao/$id/setor/$sid': typeof AuthenticatedInspecaoIdSetorSidRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/inspecao/nova'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/inspecao/nova'
+    | '/inspecao/$id/observacoes'
+    | '/inspecao/$id/qr'
+    | '/inspecao/$id/setor/$sid'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/' | '/inspecao/nova'
+  to:
+    | '/login'
+    | '/'
+    | '/inspecao/nova'
+    | '/inspecao/$id/observacoes'
+    | '/inspecao/$id/qr'
+    | '/inspecao/$id/setor/$sid'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
     | '/_authenticated/'
     | '/_authenticated/inspecao/nova'
+    | '/_authenticated/inspecao/$id/observacoes'
+    | '/_authenticated/inspecao/$id/qr'
+    | '/_authenticated/inspecao/$id/setor/$sid'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -100,17 +145,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInspecaoNovaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/inspecao/$id/qr': {
+      id: '/_authenticated/inspecao/$id/qr'
+      path: '/inspecao/$id/qr'
+      fullPath: '/inspecao/$id/qr'
+      preLoaderRoute: typeof AuthenticatedInspecaoIdQrRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/inspecao/$id/observacoes': {
+      id: '/_authenticated/inspecao/$id/observacoes'
+      path: '/inspecao/$id/observacoes'
+      fullPath: '/inspecao/$id/observacoes'
+      preLoaderRoute: typeof AuthenticatedInspecaoIdObservacoesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/inspecao/$id/setor/$sid': {
+      id: '/_authenticated/inspecao/$id/setor/$sid'
+      path: '/inspecao/$id/setor/$sid'
+      fullPath: '/inspecao/$id/setor/$sid'
+      preLoaderRoute: typeof AuthenticatedInspecaoIdSetorSidRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedInspecaoNovaRoute: typeof AuthenticatedInspecaoNovaRoute
+  AuthenticatedInspecaoIdObservacoesRoute: typeof AuthenticatedInspecaoIdObservacoesRoute
+  AuthenticatedInspecaoIdQrRoute: typeof AuthenticatedInspecaoIdQrRoute
+  AuthenticatedInspecaoIdSetorSidRoute: typeof AuthenticatedInspecaoIdSetorSidRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedInspecaoNovaRoute: AuthenticatedInspecaoNovaRoute,
+  AuthenticatedInspecaoIdObservacoesRoute:
+    AuthenticatedInspecaoIdObservacoesRoute,
+  AuthenticatedInspecaoIdQrRoute: AuthenticatedInspecaoIdQrRoute,
+  AuthenticatedInspecaoIdSetorSidRoute: AuthenticatedInspecaoIdSetorSidRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
