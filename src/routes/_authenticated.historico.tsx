@@ -63,6 +63,9 @@ function HistoricoPage() {
 
   return (
     <AppShell title="Histórico" back="/">
+      <div className="mb-3 flex justify-end">
+        <CopyFilterLinkButton />
+      </div>
       <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
         {FILTROS.map((f) => {
           const ativo = filtro === f.id;
