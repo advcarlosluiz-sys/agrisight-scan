@@ -49,6 +49,20 @@ function Dashboard() {
 
   return (
     <AppShell title="Dashboard" back="/">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Status do processo
+      </h3>
+      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        <KpiProc label="Todos" value={cntProc("todos")} ativo={filtro === "todos"} onClick={() => setFiltro("todos")} tone="neutral" />
+        <KpiProc label="Em andamento" value={cntProc("em_andamento")} ativo={filtro === "em_andamento"} onClick={() => setFiltro("em_andamento")} tone="muted" />
+        <KpiProc label="Analisando" value={cntProc("analisando")} ativo={filtro === "analisando"} onClick={() => setFiltro("analisando")} tone="primary" />
+        <KpiProc label="Concluídas" value={cntProc("concluida")} ativo={filtro === "concluida"} onClick={() => setFiltro("concluida")} tone="success" />
+        <KpiProc label="Canceladas" value={cntProc("cancelada")} ativo={filtro === "cancelada"} onClick={() => setFiltro("cancelada")} tone="destructive" />
+      </div>
+
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Diagnóstico
+      </h3>
       <div className="grid grid-cols-2 gap-2">
         <Kpi label="Total de inspeções" value={total} tone="primary" />
         <Kpi label="Críticos" value={cnt("critico")} tone="destructive" />
@@ -73,34 +87,9 @@ function Dashboard() {
         </div>
       </div>
 
-      <h3 className="mt-5 mb-2 text-sm font-semibold">Últimas inspeções</h3>
-      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1">
-        {FILTROS.map((f) => {
-          const ativo = filtro === f.id;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setFiltro(f.id)}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                ativo
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground active:bg-muted",
-              )}
-            >
-              {f.label}
-              <span
-                className={cn(
-                  "ml-1.5 rounded-full px-1.5 text-[10px]",
-                  ativo ? "bg-primary-foreground/20" : "bg-muted text-foreground",
-                )}
-              >
-                {cntProc(f.id)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <h3 className="mt-5 mb-2 text-sm font-semibold">
+        Últimas inspeções{filtro !== "todos" ? ` · ${FILTROS.find((f) => f.id === filtro)?.label}` : ""}
+      </h3>
       <div className="space-y-2">
         {inspecoesFiltradas.length === 0 && (
           <p className="text-sm text-muted-foreground">Nenhuma inspeção neste filtro.</p>
@@ -142,6 +131,61 @@ function Kpi({ label, value, tone }: { label: string; value: number; tone: "prim
       <p className="text-xs uppercase opacity-90">{label}</p>
       <p className="text-2xl font-bold">{value}</p>
     </div>
+  );
+}
+
+type KpiTone = "neutral" | "muted" | "primary" | "success" | "destructive";
+function KpiProc({
+  label,
+  value,
+  ativo,
+  onClick,
+  tone,
+}: {
+  label: string;
+  value: number;
+  ativo: boolean;
+  onClick: () => void;
+  tone: KpiTone;
+}) {
+  const tones: Record<KpiTone, { idle: string; ativo: string; valor: string }> = {
+    neutral: {
+      idle: "bg-card",
+      ativo: "bg-foreground text-background border-foreground",
+      valor: "text-foreground",
+    },
+    muted: {
+      idle: "bg-card",
+      ativo: "bg-muted border-foreground/30",
+      valor: "text-foreground",
+    },
+    primary: {
+      idle: "bg-card",
+      ativo: "bg-primary/15 border-primary",
+      valor: "text-primary",
+    },
+    success: {
+      idle: "bg-card",
+      ativo: "bg-emerald-500/15 border-emerald-500",
+      valor: "text-emerald-600 dark:text-emerald-400",
+    },
+    destructive: {
+      idle: "bg-card",
+      ativo: "bg-destructive/15 border-destructive",
+      valor: "text-destructive",
+    },
+  };
+  const t = tones[tone];
+  return (
+    <button
+      onClick={onClick}
+      className={`flex min-w-[7.5rem] shrink-0 flex-col items-start gap-0.5 rounded-2xl border p-3 text-left shadow-card transition active:scale-[0.98] ${
+        ativo ? t.ativo : `${t.idle} border-border`
+      }`}
+    >
+      <span className={`text-2xl font-bold ${ativo ? "" : t.valor}`}>{value}</span>
+      <span className="text-[11px] uppercase tracking-wide opacity-80">{label}</span>
+    </button>
   );
 }
 function Legend({ dot, label }: { dot: string; label: string }) {
