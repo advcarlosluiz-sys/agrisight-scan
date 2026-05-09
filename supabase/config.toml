@@ -1,1 +1,4 @@
 project_id = "fvnaxvxftdohnmjbhhai"
+
+[functions.analisar-inspecao]
+verify_jwt = true
