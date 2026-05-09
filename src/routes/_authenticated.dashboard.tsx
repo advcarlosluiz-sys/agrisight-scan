@@ -74,10 +74,45 @@ function Dashboard() {
       </div>
 
       <h3 className="mt-5 mb-2 text-sm font-semibold">Últimas inspeções</h3>
+      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1">
+        {FILTROS.map((f) => {
+          const ativo = filtro === f.id;
+          return (
+            <button
+              key={f.id}
+              onClick={() => setFiltro(f.id)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                ativo
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-muted-foreground active:bg-muted",
+              )}
+            >
+              {f.label}
+              <span
+                className={cn(
+                  "ml-1.5 rounded-full px-1.5 text-[10px]",
+                  ativo ? "bg-primary-foreground/20" : "bg-muted text-foreground",
+                )}
+              >
+                {cntProc(f.id)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
       <div className="space-y-2">
-        {inspecoes?.slice(0, 5).map((i: any) => (
-          <Link key={i.id} to="/inspecao/$id/resultado" params={{ id: i.id }} className="flex items-center justify-between rounded-xl border bg-card p-3">
-            <span className="text-sm">Setor {i.setor?.codigo ?? "—"} · {new Date(i.data_inspecao).toLocaleDateString("pt-BR")}</span>
+        {inspecoesFiltradas.length === 0 && (
+          <p className="text-sm text-muted-foreground">Nenhuma inspeção neste filtro.</p>
+        )}
+        {inspecoesFiltradas.slice(0, 5).map((i: any) => (
+          <Link key={i.id} to="/inspecao/$id/resultado" params={{ id: i.id }} className="flex items-center justify-between gap-2 rounded-xl border bg-card p-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm">Setor {i.setor?.codigo ?? "—"} · {new Date(i.data_inspecao).toLocaleDateString("pt-BR")}</p>
+              <div className="mt-1">
+                <StatusProcessoBadge status={i.status_processo} />
+              </div>
+            </div>
             <StatusPill status={i.status_geral} />
           </Link>
         ))}
