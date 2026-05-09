@@ -81,6 +81,20 @@ export type Database = {
             referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "analises_inspecao_fk"
+            columns: ["inspecao_id"]
+            isOneToOne: false
+            referencedRelation: "inspecoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analises_organizacao_fk"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       canteiros: {
@@ -119,10 +133,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "canteiros_organizacao_fk"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "canteiros_organizacao_id_fkey"
             columns: ["organizacao_id"]
             isOneToOne: false
             referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canteiros_propriedade_fk"
+            columns: ["propriedade_id"]
+            isOneToOne: false
+            referencedRelation: "propriedades"
             referencedColumns: ["id"]
           },
           {
@@ -164,6 +192,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fotos_inspecao_fk"
+            columns: ["inspecao_id"]
+            isOneToOne: false
+            referencedRelation: "inspecoes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fotos_inspecao_inspecao_id_fkey"
             columns: ["inspecao_id"]
             isOneToOne: false
@@ -172,6 +207,13 @@ export type Database = {
           },
           {
             foreignKeyName: "fotos_inspecao_organizacao_id_fkey"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fotos_organizacao_fk"
             columns: ["organizacao_id"]
             isOneToOne: false
             referencedRelation: "organizacoes"
@@ -257,10 +299,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "inspecoes_canteiro_fk"
+            columns: ["canteiro_id"]
+            isOneToOne: false
+            referencedRelation: "canteiros"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "inspecoes_canteiro_id_fkey"
             columns: ["canteiro_id"]
             isOneToOne: false
             referencedRelation: "canteiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspecoes_organizacao_fk"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
           {
@@ -271,6 +327,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inspecoes_propriedade_fk"
+            columns: ["propriedade_id"]
+            isOneToOne: false
+            referencedRelation: "propriedades"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "inspecoes_propriedade_id_fkey"
             columns: ["propriedade_id"]
             isOneToOne: false
@@ -278,10 +341,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inspecoes_setor_fk"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "inspecoes_setor_id_fkey"
             columns: ["setor_id"]
             isOneToOne: false
             referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspecoes_vistoriador_fk"
+            columns: ["vistoriador_id"]
+            isOneToOne: false
+            referencedRelation: "perfis"
             referencedColumns: ["id"]
           },
         ]
@@ -340,6 +417,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "perfis_organizacao_fk"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "perfis_organizacao_id_fkey"
             columns: ["organizacao_id"]
             isOneToOne: false
@@ -380,6 +464,13 @@ export type Database = {
           telefone?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "produtores_organizacao_fk"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "produtores_organizacao_id_fkey"
             columns: ["organizacao_id"]
@@ -428,10 +519,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "propriedades_organizacao_fk"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "propriedades_organizacao_id_fkey"
             columns: ["organizacao_id"]
             isOneToOne: false
             referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "propriedades_produtor_fk"
+            columns: ["produtor_id"]
+            isOneToOne: false
+            referencedRelation: "produtores"
             referencedColumns: ["id"]
           },
           {
@@ -482,6 +587,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "relatorios_canteiro_fk"
+            columns: ["canteiro_id"]
+            isOneToOne: false
+            referencedRelation: "canteiros"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "relatorios_canteiro_id_fkey"
             columns: ["canteiro_id"]
             isOneToOne: false
@@ -489,10 +601,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "relatorios_organizacao_fk"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "relatorios_organizacao_id_fkey"
             columns: ["organizacao_id"]
             isOneToOne: false
             referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_propriedade_fk"
+            columns: ["propriedade_id"]
+            isOneToOne: false
+            referencedRelation: "propriedades"
             referencedColumns: ["id"]
           },
           {
@@ -540,10 +666,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "setores_canteiro_fk"
+            columns: ["canteiro_id"]
+            isOneToOne: false
+            referencedRelation: "canteiros"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "setores_canteiro_id_fkey"
             columns: ["canteiro_id"]
             isOneToOne: false
             referencedRelation: "canteiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "setores_organizacao_fk"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
             referencedColumns: ["id"]
           },
           {
@@ -594,6 +734,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "tarefas_inspecao_fk"
+            columns: ["inspecao_id"]
+            isOneToOne: false
+            referencedRelation: "inspecoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_organizacao_fk"
+            columns: ["organizacao_id"]
+            isOneToOne: false
+            referencedRelation: "organizacoes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tarefas_recomendadas_inspecao_id_fkey"
             columns: ["inspecao_id"]
             isOneToOne: false
@@ -609,6 +763,13 @@ export type Database = {
           },
           {
             foreignKeyName: "tarefas_recomendadas_setor_id_fkey"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_setor_fk"
             columns: ["setor_id"]
             isOneToOne: false
             referencedRelation: "setores"
