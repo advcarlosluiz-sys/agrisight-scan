@@ -31,12 +31,19 @@ function HomePage() {
   });
 
   const items = [
-    { to: "/inspecao/nova", icon: PlayCircle, label: "Nova Inspeção", primary: true },
-    { to: pendente ? `/inspecao/${pendente.id}/observacoes` : "/historico", icon: ClipboardList, label: "Continuar Inspeção", disabled: !pendente, sub: pendente ? `Setor ${(pendente as any).setor?.codigo ?? "—"}` : "Nenhuma pendente" },
-    { to: "/historico", icon: History, label: "Histórico" },
-    { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/configuracoes", icon: Settings, label: "Configurações" },
-  ] as const;
+    { to: "/inspecao/nova", params: undefined, icon: PlayCircle, label: "Nova Inspeção", primary: true, sub: undefined as string | undefined },
+    {
+      to: pendente ? "/inspecao/$id/observacoes" : "/historico",
+      params: pendente ? { id: pendente.id } : undefined,
+      icon: ClipboardList,
+      label: "Continuar Inspeção",
+      disabled: !pendente,
+      sub: pendente ? `Setor ${(pendente as any).setor?.codigo ?? "—"}` : "Nenhuma pendente",
+    },
+    { to: "/historico", params: undefined, icon: History, label: "Histórico", sub: undefined as string | undefined },
+    { to: "/dashboard", params: undefined, icon: LayoutDashboard, label: "Dashboard", sub: undefined as string | undefined },
+    { to: "/configuracoes", params: undefined, icon: Settings, label: "Configurações", sub: undefined as string | undefined },
+  ];
 
   return (
     <AppShell title="Agrobotic Scout AI">
