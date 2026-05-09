@@ -31,12 +31,19 @@ function HomePage() {
   });
 
   const items = [
-    { to: "/inspecao/nova", icon: PlayCircle, label: "Nova Inspeção", primary: true },
-    { to: pendente ? `/inspecao/${pendente.id}/observacoes` : "/historico", icon: ClipboardList, label: "Continuar Inspeção", disabled: !pendente, sub: pendente ? `Setor ${(pendente as any).setor?.codigo ?? "—"}` : "Nenhuma pendente" },
-    { to: "/historico", icon: History, label: "Histórico" },
-    { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { to: "/configuracoes", icon: Settings, label: "Configurações" },
-  ] as const;
+    { to: "/inspecao/nova", params: undefined, icon: PlayCircle, label: "Nova Inspeção", primary: true, sub: undefined as string | undefined },
+    {
+      to: pendente ? "/inspecao/$id/observacoes" : "/historico",
+      params: pendente ? { id: pendente.id } : undefined,
+      icon: ClipboardList,
+      label: "Continuar Inspeção",
+      disabled: !pendente,
+      sub: pendente ? `Setor ${(pendente as any).setor?.codigo ?? "—"}` : "Nenhuma pendente",
+    },
+    { to: "/historico", params: undefined, icon: History, label: "Histórico", sub: undefined as string | undefined },
+    { to: "/dashboard", params: undefined, icon: LayoutDashboard, label: "Dashboard", sub: undefined as string | undefined },
+    { to: "/configuracoes", params: undefined, icon: Settings, label: "Configurações", sub: undefined as string | undefined },
+  ];
 
   return (
     <AppShell title="Agrobotic Scout AI">
@@ -50,7 +57,8 @@ function HomePage() {
         {items.map((it) => (
           <Link
             key={it.label}
-            to={it.to}
+            to={it.to as any}
+            params={it.params as any}
             className={`group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-card transition active:scale-[0.99] ${(it as any).disabled ? "pointer-events-none opacity-60" : ""} ${(it as any).primary ? "border-primary/30 ring-2 ring-primary/15" : ""}`}
           >
             <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${(it as any).primary ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary"}`}>
@@ -58,7 +66,7 @@ function HomePage() {
             </div>
             <div className="flex-1">
               <div className="font-semibold">{it.label}</div>
-              {(it as any).sub && <div className="text-xs text-muted-foreground">{(it as any).sub}</div>}
+              {it.sub && <div className="text-xs text-muted-foreground">{it.sub}</div>}
             </div>
           </Link>
         ))}
