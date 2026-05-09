@@ -33,6 +33,7 @@ const FILTROS: { id: Filtro; label: string }[] = [
 function Dashboard() {
   const { filtro } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
+  usePersistedFilter("dashboard:filtro", filtro, "todos", "/dashboard");
   const setFiltro = (f: Filtro) =>
     navigate({ search: { filtro: f }, replace: true });
   const { data: inspecoes } = useQuery({
