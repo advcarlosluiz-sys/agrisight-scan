@@ -63,9 +63,12 @@ function Dashboard() {
 
   return (
     <AppShell title="Dashboard" back="/">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Status do processo
-      </h3>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Status do processo
+        </h3>
+        <CopyFilterLinkButton />
+      </div>
       <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
         <KpiProc label="Todos" value={cntProc("todos")} ativo={filtro === "todos"} onClick={() => setFiltro("todos")} tone="neutral" />
         <KpiProc label="Em andamento" value={cntProc("em_andamento")} ativo={filtro === "em_andamento"} onClick={() => setFiltro("em_andamento")} tone="muted" />
