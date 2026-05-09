@@ -40,6 +40,12 @@ function Dashboard() {
 
   const total = inspecoes?.length ?? 0;
   const cnt = (s: string) => inspecoes?.filter((i: any) => i.status_geral === s).length ?? 0;
+  const cntProc = (f: Filtro) =>
+    f === "todos"
+      ? inspecoes?.length ?? 0
+      : (inspecoes ?? []).filter((i: any) => i.status_processo === f).length;
+  const inspecoesFiltradas =
+    filtro === "todos" ? inspecoes ?? [] : (inspecoes ?? []).filter((i: any) => i.status_processo === filtro);
 
   return (
     <AppShell title="Dashboard" back="/">
