@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
