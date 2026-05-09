@@ -33,7 +33,7 @@ function Dashboard() {
   const { filtro } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
   const setFiltro = (f: Filtro) =>
-    navigate({ search: (prev) => ({ ...prev, filtro: f }), replace: true });
+    navigate({ search: { filtro: f }, replace: true });
   const { data: inspecoes } = useQuery({
     queryKey: ["dash-inspecoes"],
     queryFn: async () =>
