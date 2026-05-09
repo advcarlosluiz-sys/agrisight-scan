@@ -100,6 +100,10 @@ function AnalisandoPage() {
                 <span>{ETAPAS[etapa]}</span>
               </div>
             </div>
+
+            <Button variant="outline" onClick={cancelar} className="mt-2 w-full max-w-sm">
+              Cancelar análise
+            </Button>
           </>
         ) : (
           <>
