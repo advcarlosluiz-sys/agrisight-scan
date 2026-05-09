@@ -57,7 +57,8 @@ function HomePage() {
         {items.map((it) => (
           <Link
             key={it.label}
-            to={it.to}
+            to={it.to as any}
+            params={it.params as any}
             className={`group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-card transition active:scale-[0.99] ${(it as any).disabled ? "pointer-events-none opacity-60" : ""} ${(it as any).primary ? "border-primary/30 ring-2 ring-primary/15" : ""}`}
           >
             <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${(it as any).primary ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary"}`}>
@@ -65,7 +66,7 @@ function HomePage() {
             </div>
             <div className="flex-1">
               <div className="font-semibold">{it.label}</div>
-              {(it as any).sub && <div className="text-xs text-muted-foreground">{(it as any).sub}</div>}
+              {it.sub && <div className="text-xs text-muted-foreground">{it.sub}</div>}
             </div>
           </Link>
         ))}
