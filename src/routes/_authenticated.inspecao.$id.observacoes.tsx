@@ -36,9 +36,12 @@ function ObsPage() {
   const analisar = async () => {
     setBusy(true);
     try {
-      const updates: Record<string, unknown> = { observacao_manual: nota };
+      const updates: Record<string, boolean> = {};
       OBS.forEach(([k]) => (updates[k] = !!marcado[k]));
-      const { error: uErr } = await supabase.from("inspecoes").update(updates).eq("id", id);
+      const { error: uErr } = await supabase
+        .from("inspecoes")
+        .update({ observacao_manual: nota, ...(updates as never) })
+        .eq("id", id);
       if (uErr) throw uErr;
 
       toast.info("Analisando com IA...", { duration: 8000 });
