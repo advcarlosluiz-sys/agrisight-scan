@@ -36,11 +36,12 @@ function ObsPage() {
   const analisar = async () => {
     setBusy(true);
     try {
-      const updates: Record<string, boolean> = {};
+      const updates: Record<string, boolean | string | null> = { observacao_manual: nota };
       OBS.forEach(([k]) => (updates[k] = !!marcado[k]));
       const { error: uErr } = await supabase
         .from("inspecoes")
-        .update({ observacao_manual: nota, ...(updates as never) })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update(updates as any)
         .eq("id", id);
       if (uErr) throw uErr;
 
