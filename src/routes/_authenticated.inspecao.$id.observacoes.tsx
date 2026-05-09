@@ -45,7 +45,7 @@ function ObsPage() {
       const { error: uErr } = await supabase
         .from("inspecoes")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .update(updates as any)
+        .update({ ...updates, status_processo: "analisando" } as any)
         .eq("id", id);
       if (uErr) throw uErr;
 

@@ -243,6 +243,7 @@ export type Database = {
           solo_encharcado: boolean | null
           solo_seco: boolean | null
           status_geral: Database["public"]["Enums"]["status_geral"] | null
+          status_processo: Database["public"]["Enums"]["status_processo_inspecao"]
           temperatura: number | null
           umidade: number | null
           vistoriador_id: string | null
@@ -268,6 +269,7 @@ export type Database = {
           solo_encharcado?: boolean | null
           solo_seco?: boolean | null
           status_geral?: Database["public"]["Enums"]["status_geral"] | null
+          status_processo?: Database["public"]["Enums"]["status_processo_inspecao"]
           temperatura?: number | null
           umidade?: number | null
           vistoriador_id?: string | null
@@ -293,6 +295,7 @@ export type Database = {
           solo_encharcado?: boolean | null
           solo_seco?: boolean | null
           status_geral?: Database["public"]["Enums"]["status_geral"] | null
+          status_processo?: Database["public"]["Enums"]["status_processo_inspecao"]
           temperatura?: number | null
           umidade?: number | null
           vistoriador_id?: string | null
@@ -790,6 +793,11 @@ export type Database = {
       prioridade_tarefa: "baixa" | "media" | "alta" | "urgente"
       risco_nivel: "baixo" | "medio" | "alto"
       status_geral: "normal" | "atencao" | "critico"
+      status_processo_inspecao:
+        | "em_andamento"
+        | "analisando"
+        | "concluida"
+        | "cancelada"
       status_tarefa: "pendente" | "em_andamento" | "concluida" | "cancelada"
       tipo_foto: "geral" | "plantas" | "folhas" | "frutos" | "solo" | "plastico"
     }
@@ -923,6 +931,12 @@ export const Constants = {
       prioridade_tarefa: ["baixa", "media", "alta", "urgente"],
       risco_nivel: ["baixo", "medio", "alto"],
       status_geral: ["normal", "atencao", "critico"],
+      status_processo_inspecao: [
+        "em_andamento",
+        "analisando",
+        "concluida",
+        "cancelada",
+      ],
       status_tarefa: ["pendente", "em_andamento", "concluida", "cancelada"],
       tipo_foto: ["geral", "plantas", "folhas", "frutos", "solo", "plastico"],
     },

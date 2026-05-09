@@ -178,7 +178,7 @@ ${imageContents.length ? `${imageContents.length} foto(s) anexada(s).` : "Sem fo
     // Atualizar inspeção e setor com status
     await admin
       .from("inspecoes")
-      .update({ status_geral: parsed.status_geral, risco: parsed.risco })
+      .update({ status_geral: parsed.status_geral, risco: parsed.risco, status_processo: "concluida" })
       .eq("id", inspecao_id);
 
     if (inspecao.setor_id) {

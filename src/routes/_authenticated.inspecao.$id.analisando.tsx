@@ -68,8 +68,16 @@ function AnalisandoPage() {
     };
   }, [id, navigate]);
 
-  const cancelar = () => {
+  const cancelar = async () => {
     canceladoRef.current = true;
+    try {
+      await supabase
+        .from("inspecoes")
+        .update({ status_processo: "cancelada" })
+        .eq("id", id);
+    } catch {
+      // ignora — segue cancelando localmente
+    }
     toast.info("Análise cancelada");
     navigate({ to: "/inspecao/$id/observacoes", params: { id } });
   };
