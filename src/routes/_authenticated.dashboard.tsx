@@ -87,34 +87,9 @@ function Dashboard() {
         </div>
       </div>
 
-      <h3 className="mt-5 mb-2 text-sm font-semibold">Últimas inspeções</h3>
-      <div className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 pb-1">
-        {FILTROS.map((f) => {
-          const ativo = filtro === f.id;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setFiltro(f.id)}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                ativo
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground active:bg-muted",
-              )}
-            >
-              {f.label}
-              <span
-                className={cn(
-                  "ml-1.5 rounded-full px-1.5 text-[10px]",
-                  ativo ? "bg-primary-foreground/20" : "bg-muted text-foreground",
-                )}
-              >
-                {cntProc(f.id)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <h3 className="mt-5 mb-2 text-sm font-semibold">
+        Últimas inspeções{filtro !== "todos" ? ` · ${FILTROS.find((f) => f.id === filtro)?.label}` : ""}
+      </h3>
       <div className="space-y-2">
         {inspecoesFiltradas.length === 0 && (
           <p className="text-sm text-muted-foreground">Nenhuma inspeção neste filtro.</p>
