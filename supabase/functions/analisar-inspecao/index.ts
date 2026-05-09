@@ -158,7 +158,7 @@ ${imageContents.length ? `${imageContents.length} foto(s) anexada(s).` : "Sem fo
       .insert({
         organizacao_id: inspecao.organizacao_id,
         inspecao_id,
-        modelo_ia: "google/gemini-2.5-flash",
+        modelo_ia: "openai/gpt-5-mini",
         status_geral: parsed.status_geral,
         risco: parsed.risco,
         confianca: parsed.confianca,
