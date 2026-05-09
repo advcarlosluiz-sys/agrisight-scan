@@ -49,6 +49,20 @@ function Dashboard() {
 
   return (
     <AppShell title="Dashboard" back="/">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Status do processo
+      </h3>
+      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        <KpiProc label="Todos" value={cntProc("todos")} ativo={filtro === "todos"} onClick={() => setFiltro("todos")} tone="neutral" />
+        <KpiProc label="Em andamento" value={cntProc("em_andamento")} ativo={filtro === "em_andamento"} onClick={() => setFiltro("em_andamento")} tone="muted" />
+        <KpiProc label="Analisando" value={cntProc("analisando")} ativo={filtro === "analisando"} onClick={() => setFiltro("analisando")} tone="primary" />
+        <KpiProc label="Concluídas" value={cntProc("concluida")} ativo={filtro === "concluida"} onClick={() => setFiltro("concluida")} tone="success" />
+        <KpiProc label="Canceladas" value={cntProc("cancelada")} ativo={filtro === "cancelada"} onClick={() => setFiltro("cancelada")} tone="destructive" />
+      </div>
+
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Diagnóstico
+      </h3>
       <div className="grid grid-cols-2 gap-2">
         <Kpi label="Total de inspeções" value={total} tone="primary" />
         <Kpi label="Críticos" value={cnt("critico")} tone="destructive" />
