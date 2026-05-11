@@ -18,6 +18,8 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
 const AI_TIMEOUT_MS = 55_000;
 const MODELO_IA = "openai/gpt-5-mini";
+// Incrementar a cada mudança significativa nos prompts (system/user) abaixo.
+const PROMPT_VERSAO = "v1.1.0";
 
 type StatusGeral = "normal" | "atencao" | "critico";
 type RiscoNivel = "baixo" | "medio" | "alto";
@@ -231,6 +233,9 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
         organizacao_id: inspecao.organizacao_id,
         inspecao_id,
         modelo_ia: aiDegradado ? `${MODELO_IA} (fallback)` : MODELO_IA,
+        prompt_versao: PROMPT_VERSAO,
+        prompt_system: systemPrompt,
+        prompt_user: userText,
         status_geral: parsed.status_geral,
         risco: parsed.risco,
         confianca: parsed.confianca,
