@@ -1,10 +1,12 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { StatusPill } from "@/components/status-pill";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertTriangle, FileText, Sparkles, UserCheck } from "lucide-react";
+import { AlertTriangle, FileText, RefreshCw, Sparkles, UserCheck } from "lucide-react";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
   component: ResultadoPage,
