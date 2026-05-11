@@ -90,7 +90,7 @@ function ColetaPage() {
       await supabase.from("fotos_inspecao").insert({
         organizacao_id: orgRes.data!,
         inspecao_id: id,
-        tipo_foto: tipo as FotoRow["tipo_foto"],
+        tipo_foto: tipo as (typeof TIPOS)[number]["key"],
         storage_path: path,
       });
       toast.success(existente ? `Foto "${tipo}" substituída` : `Foto "${tipo}" enviada`);
