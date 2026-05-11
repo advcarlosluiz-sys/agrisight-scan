@@ -1,10 +1,12 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { StatusPill } from "@/components/status-pill";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertTriangle, FileText, Sparkles, UserCheck } from "lucide-react";
+import { AlertTriangle, FileText, RefreshCw, Sparkles, UserCheck } from "lucide-react";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
   component: ResultadoPage,
@@ -12,6 +14,25 @@ export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
 
 function ResultadoPage() {
   const { id } = useParams({ from: "/_authenticated/inspecao/$id/resultado" });
+  const navigate = useNavigate();
+  const [reanalisando, setReanalisando] = useState(false);
+
+  const reanalisar = async () => {
+    setReanalisando(true);
+    try {
+      const { error } = await supabase
+        .from("inspecoes")
+        .update({ status_processo: "em_andamento" })
+        .eq("id", id);
+      if (error) throw error;
+      toast.info("Reanalisando inspeção...");
+      navigate({ to: "/inspecao/$id/analisando", params: { id } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao iniciar reanálise");
+      setReanalisando(false);
+    }
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ["analise", id],
     queryFn: async () =>
@@ -85,7 +106,17 @@ function ResultadoPage() {
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      <Button
+        variant="outline"
+        className="mt-6 w-full"
+        onClick={reanalisar}
+        disabled={reanalisando}
+      >
+        <RefreshCw className={`mr-2 h-4 w-4 ${reanalisando ? "animate-spin" : ""}`} />
+        {reanalisando ? "Reiniciando..." : "Reanalisar com IA (reaproveita as fotos)"}
+      </Button>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
         <Button asChild variant="secondary"><Link to="/">Início</Link></Button>
         <Button asChild><Link to="/relatorio/$id" params={{ id }}>Ver Relatório</Link></Button>
       </div>
