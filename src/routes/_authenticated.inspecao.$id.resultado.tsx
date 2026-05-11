@@ -14,6 +14,25 @@ export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
 
 function ResultadoPage() {
   const { id } = useParams({ from: "/_authenticated/inspecao/$id/resultado" });
+  const navigate = useNavigate();
+  const [reanalisando, setReanalisando] = useState(false);
+
+  const reanalisar = async () => {
+    setReanalisando(true);
+    try {
+      const { error } = await supabase
+        .from("inspecoes")
+        .update({ status_processo: "em_andamento" })
+        .eq("id", id);
+      if (error) throw error;
+      toast.info("Reanalisando inspeção...");
+      navigate({ to: "/inspecao/$id/analisando", params: { id } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha ao iniciar reanálise");
+      setReanalisando(false);
+    }
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ["analise", id],
     queryFn: async () =>
