@@ -28,6 +28,9 @@ export type Database = {
           organizacao_id: string
           prioridade: string | null
           problemas_detectados: Json | null
+          prompt_system: string | null
+          prompt_user: string | null
+          prompt_versao: string | null
           resposta_completa: Json | null
           risco: Database["public"]["Enums"]["risco_nivel"] | null
           status_geral: Database["public"]["Enums"]["status_geral"] | null
@@ -45,6 +48,9 @@ export type Database = {
           organizacao_id: string
           prioridade?: string | null
           problemas_detectados?: Json | null
+          prompt_system?: string | null
+          prompt_user?: string | null
+          prompt_versao?: string | null
           resposta_completa?: Json | null
           risco?: Database["public"]["Enums"]["risco_nivel"] | null
           status_geral?: Database["public"]["Enums"]["status_geral"] | null
@@ -62,6 +68,9 @@ export type Database = {
           organizacao_id?: string
           prioridade?: string | null
           problemas_detectados?: Json | null
+          prompt_system?: string | null
+          prompt_user?: string | null
+          prompt_versao?: string | null
           resposta_completa?: Json | null
           risco?: Database["public"]["Enums"]["risco_nivel"] | null
           status_geral?: Database["public"]["Enums"]["status_geral"] | null
