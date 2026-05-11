@@ -106,7 +106,17 @@ function ResultadoPage() {
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      <Button
+        variant="outline"
+        className="mt-6 w-full"
+        onClick={reanalisar}
+        disabled={reanalisando}
+      >
+        <RefreshCw className={`mr-2 h-4 w-4 ${reanalisando ? "animate-spin" : ""}`} />
+        {reanalisando ? "Reiniciando..." : "Reanalisar com IA (reaproveita as fotos)"}
+      </Button>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
         <Button asChild variant="secondary"><Link to="/">Início</Link></Button>
         <Button asChild><Link to="/relatorio/$id" params={{ id }}>Ver Relatório</Link></Button>
       </div>
