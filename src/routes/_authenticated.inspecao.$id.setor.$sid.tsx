@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Camera, Check, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { Camera, Loader2, Plus, Trash2 } from "lucide-react";
 
 const TIPOS = [
   { key: "geral", label: "Geral" },
@@ -18,7 +18,8 @@ const TIPOS = [
   { key: "plastico", label: "Plástico/Túnel" },
 ] as const;
 
-type FotoRow = { id: string; tipo_foto: string; storage_path: string };
+type TipoKey = (typeof TIPOS)[number]["key"];
+type FotoRow = { id: string; tipo_foto: TipoKey; storage_path: string };
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/setor/$sid")({
   component: ColetaPage,
@@ -31,7 +32,7 @@ function ColetaPage() {
   const [umid, setUmid] = useState("");
   const [lum, setLum] = useState("");
   const [busy, setBusy] = useState(false);
-  const [uploadingTipo, setUploadingTipo] = useState<string | null>(null);
+  const [uploadingTipo, setUploadingTipo] = useState<TipoKey | null>(null);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -43,13 +44,14 @@ function ColetaPage() {
   const { data: fotos, refetch: refetchFotos } = useQuery({
     queryKey: ["fotos", id],
     queryFn: async (): Promise<FotoRow[]> =>
-      ((await supabase
+      (((await supabase
         .from("fotos_inspecao")
         .select("id, tipo_foto, storage_path")
-        .eq("inspecao_id", id)).data ?? []) as FotoRow[],
+        .eq("inspecao_id", id)
+        .order("created_at", { ascending: true })).data ?? []) as FotoRow[]),
   });
 
-  // Gera signed URLs para preview de cada foto presente
+  // Signed URLs por foto.id
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -58,7 +60,7 @@ function ColetaPage() {
         const { data } = await supabase.storage
           .from("inspection-photos")
           .createSignedUrl(f.storage_path, 600);
-        if (data?.signedUrl) novos[f.tipo_foto] = data.signedUrl;
+        if (data?.signedUrl) novos[f.id] = data.signedUrl;
       }
       if (!cancelled) setPreviews(novos);
     })();
@@ -67,33 +69,25 @@ function ColetaPage() {
     };
   }, [fotos]);
 
-  const fotoPorTipo = new Map((fotos ?? []).map((f) => [f.tipo_foto, f]));
+  const fotosPorTipo = (tipo: TipoKey) => (fotos ?? []).filter((f) => f.tipo_foto === tipo);
 
-  const upload = async (tipo: string, file: File) => {
+  const upload = async (tipo: TipoKey, file: File) => {
     setUploadingTipo(tipo);
     try {
       const orgRes = await supabase.rpc("current_org_id");
-      const path = `${orgRes.data}/${id}/${tipo}-${Date.now()}.jpg`;
+      const path = `${orgRes.data}/${id}/${tipo}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
       const { error } = await supabase.storage.from("inspection-photos").upload(path, file, {
         contentType: file.type || "image/jpeg",
         upsert: false,
       });
       if (error) throw error;
-
-      // Se já existe foto deste tipo, remove a anterior (substituição)
-      const existente = fotoPorTipo.get(tipo);
-      if (existente) {
-        await supabase.storage.from("inspection-photos").remove([existente.storage_path]);
-        await supabase.from("fotos_inspecao").delete().eq("id", existente.id);
-      }
-
       await supabase.from("fotos_inspecao").insert({
         organizacao_id: orgRes.data!,
         inspecao_id: id,
-        tipo_foto: tipo as (typeof TIPOS)[number]["key"],
+        tipo_foto: tipo,
         storage_path: path,
       });
-      toast.success(existente ? `Foto "${tipo}" substituída` : `Foto "${tipo}" enviada`);
+      toast.success(`Foto "${tipo}" adicionada`);
       refetchFotos();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro");
@@ -102,21 +96,19 @@ function ColetaPage() {
     }
   };
 
-  const remover = async (tipo: string) => {
-    const existente = fotoPorTipo.get(tipo);
-    if (!existente) return;
+  const remover = async (foto: FotoRow) => {
     try {
-      await supabase.storage.from("inspection-photos").remove([existente.storage_path]);
-      const { error } = await supabase.from("fotos_inspecao").delete().eq("id", existente.id);
+      await supabase.storage.from("inspection-photos").remove([foto.storage_path]);
+      const { error } = await supabase.from("fotos_inspecao").delete().eq("id", foto.id);
       if (error) throw error;
-      toast.success(`Foto "${tipo}" removida`);
+      toast.success("Foto removida");
       refetchFotos();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao remover");
     }
   };
 
-  const triggerInput = (tipo: string) => inputRefs.current[tipo]?.click();
+  const triggerInput = (tipo: TipoKey) => inputRefs.current[tipo]?.click();
 
   const salvar = async () => {
     setBusy(true);
@@ -145,78 +137,90 @@ function ColetaPage() {
       </div>
 
       <h3 className="mb-2 text-sm font-semibold">Fotos</h3>
-      <div className="mb-5 grid grid-cols-2 gap-2">
+      <p className="mb-3 text-xs text-muted-foreground">
+        Você pode adicionar várias fotos para cada tipo.
+      </p>
+
+      <div className="mb-5 space-y-3">
         {TIPOS.map((t) => {
-          const sent = fotoPorTipo.has(t.key);
-          const previewUrl = previews[t.key];
+          const lista = fotosPorTipo(t.key);
           const isUploading = uploadingTipo === t.key;
 
           return (
-            <div
-              key={t.key}
-              className={`relative flex aspect-square flex-col overflow-hidden rounded-2xl border-2 ${
-                sent ? "border-success" : "border-dashed border-border"
-              } bg-card`}
-            >
-              {sent && previewUrl ? (
-                <>
-                  <img
-                    src={previewUrl}
-                    alt={`Foto ${t.label}`}
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-success px-2 py-0.5 text-[11px] font-medium text-success-foreground">
-                    <Check className="h-3 w-3" /> {t.label}
-                  </div>
-                  <div className="absolute bottom-2 left-2 right-2 flex gap-1.5">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      className="h-8 flex-1 px-2 text-xs"
-                      disabled={isUploading}
-                      onClick={() => triggerInput(t.key)}
+            <div key={t.key} className="rounded-2xl border bg-card p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Camera className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">{t.label}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                    {lista.length} {lista.length === 1 ? "foto" : "fotos"}
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-2 text-xs"
+                  disabled={isUploading}
+                  onClick={() => triggerInput(t.key)}
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {lista.map((f) => {
+                  const url = previews[f.id];
+                  return (
+                    <div
+                      key={f.id}
+                      className="relative aspect-square overflow-hidden rounded-xl border bg-muted"
                     >
-                      {isUploading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      {url ? (
+                        <img
+                          src={url}
+                          alt={`Foto ${t.label}`}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
-                        <>
-                          <RefreshCw className="mr-1 h-3.5 w-3.5" /> Trocar
-                        </>
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
                       )}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      className="h-8 px-2"
-                      disabled={isUploading}
-                      onClick={() => remover(t.key)}
-                      aria-label={`Remover foto ${t.label}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </>
-              ) : (
+                      <button
+                        type="button"
+                        onClick={() => remover(f)}
+                        aria-label="Remover foto"
+                        className="absolute right-1 top-1 rounded-full bg-destructive/90 p-1 text-destructive-foreground shadow-sm hover:bg-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+
                 <button
                   type="button"
                   onClick={() => triggerInput(t.key)}
                   disabled={isUploading}
-                  className="flex h-full w-full flex-col items-center justify-center gap-2 p-2 text-sm transition hover:bg-muted/40 disabled:opacity-60"
+                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary disabled:opacity-60"
                 >
                   {isUploading ? (
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
                   ) : (
-                    <Camera className="h-6 w-6 text-primary" />
+                    <>
+                      <Plus className="h-5 w-5" />
+                      <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
+                    </>
                   )}
-                  <span className="font-medium">{t.label}</span>
-                  <span className="text-[11px] text-muted-foreground">
-                    {isUploading ? "Enviando..." : "Toque para capturar"}
-                  </span>
                 </button>
-              )}
+              </div>
 
               <input
                 ref={(el) => {
