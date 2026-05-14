@@ -9,16 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Camera, Loader2, Plus, Trash2, CheckCircle2, AlertCircle, X } from "lucide-react";
 
-type UploadStatus = "enviando" | "concluido" | "erro";
-type UploadItem = {
-  id: string;
-  tipo: TipoKey;
-  nome: string;
-  status: UploadStatus;
-  progresso: number;
-  erro?: string;
-};
-
 const TIPOS = [
   { key: "geral", label: "Geral" },
   { key: "plantas", label: "Plantas" },
@@ -30,6 +20,15 @@ const TIPOS = [
 
 type TipoKey = (typeof TIPOS)[number]["key"];
 type FotoRow = { id: string; tipo_foto: TipoKey; storage_path: string };
+type UploadStatus = "enviando" | "concluido" | "erro";
+type UploadItem = {
+  id: string;
+  tipo: TipoKey;
+  nome: string;
+  status: UploadStatus;
+  progresso: number;
+  erro?: string;
+};
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/setor/$sid")({
   component: ColetaPage,
