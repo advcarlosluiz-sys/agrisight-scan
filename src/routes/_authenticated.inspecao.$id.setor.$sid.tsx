@@ -303,17 +303,10 @@ function ColetaPage() {
                 <button
                   type="button"
                   onClick={() => triggerInput(t.key)}
-                  disabled={isUploading}
-                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary disabled:opacity-60"
+                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
                 >
-                  {isUploading ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  ) : (
-                    <>
-                      <Plus className="h-5 w-5" />
-                      <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
-                    </>
-                  )}
+                  <Plus className="h-5 w-5" />
+                  <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
                 </button>
               </div>
 
