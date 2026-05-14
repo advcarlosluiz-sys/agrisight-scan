@@ -7,7 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Camera, Loader2, Plus, Trash2 } from "lucide-react";
+import { Camera, Loader2, Plus, Trash2, CheckCircle2, AlertCircle, X } from "lucide-react";
+
+type UploadStatus = "enviando" | "concluido" | "erro";
+type UploadItem = {
+  id: string;
+  tipo: TipoKey;
+  nome: string;
+  status: UploadStatus;
+  progresso: number;
+  erro?: string;
+};
 
 const TIPOS = [
   { key: "geral", label: "Geral" },
