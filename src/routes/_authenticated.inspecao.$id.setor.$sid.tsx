@@ -316,11 +316,12 @@ function ColetaPage() {
                 }}
                 type="file"
                 accept="image/*"
+                multiple
                 capture="environment"
                 className="hidden"
                 onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) upload(t.key, f);
+                  const files = Array.from(e.target.files ?? []);
+                  files.forEach((f) => upload(t.key, f));
                   e.target.value = "";
                 }}
               />
