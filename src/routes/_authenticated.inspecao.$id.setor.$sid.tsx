@@ -86,27 +86,35 @@ function ColetaPage() {
   const fotosPorTipo = (tipo: TipoKey) => (fotos ?? []).filter((f) => f.tipo_foto === tipo);
 
   const upload = async (tipo: TipoKey, file: File) => {
-    setUploadingTipo(tipo);
+    const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setUploads((prev) => [
+      ...prev,
+      { id: uid, tipo, nome: file.name, status: "enviando", progresso: 10 },
+    ]);
     try {
       const orgRes = await supabase.rpc("current_org_id");
+      updateUpload(uid, { progresso: 30 });
       const path = `${orgRes.data}/${id}/${tipo}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
       const { error } = await supabase.storage.from("inspection-photos").upload(path, file, {
         contentType: file.type || "image/jpeg",
         upsert: false,
       });
       if (error) throw error;
-      await supabase.from("fotos_inspecao").insert({
+      updateUpload(uid, { progresso: 75 });
+      const { error: insErr } = await supabase.from("fotos_inspecao").insert({
         organizacao_id: orgRes.data!,
         inspecao_id: id,
         tipo_foto: tipo,
         storage_path: path,
       });
-      toast.success(`Foto "${tipo}" adicionada`);
+      if (insErr) throw insErr;
+      updateUpload(uid, { status: "concluido", progresso: 100 });
       refetchFotos();
+      setTimeout(() => removeUpload(uid), 2500);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro");
-    } finally {
-      setUploadingTipo(null);
+      const msg = e instanceof Error ? e.message : "Erro";
+      updateUpload(uid, { status: "erro", progresso: 100, erro: msg });
+      toast.error(msg);
     }
   };
 
