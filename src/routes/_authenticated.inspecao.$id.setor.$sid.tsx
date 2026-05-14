@@ -41,9 +41,14 @@ function ColetaPage() {
   const [umid, setUmid] = useState("");
   const [lum, setLum] = useState("");
   const [busy, setBusy] = useState(false);
-  const [uploadingTipo, setUploadingTipo] = useState<TipoKey | null>(null);
+  const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const updateUpload = (uid: string, patch: Partial<UploadItem>) =>
+    setUploads((prev) => prev.map((u) => (u.id === uid ? { ...u, ...patch } : u)));
+  const removeUpload = (uid: string) =>
+    setUploads((prev) => prev.filter((u) => u.id !== uid));
 
   const { data: setor } = useQuery({
     queryKey: ["setor", sid],
