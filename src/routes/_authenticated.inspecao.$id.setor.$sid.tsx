@@ -167,7 +167,10 @@ function ColetaPage() {
       <div className="mb-5 space-y-3">
         {TIPOS.map((t) => {
           const lista = fotosPorTipo(t.key);
-          const isUploading = uploadingTipo === t.key;
+          const tipoUploads = uploads.filter((u) => u.tipo === t.key);
+          const isUploading = tipoUploads.some((u) => u.status === "enviando");
+          const concluidos = tipoUploads.filter((u) => u.status === "concluido").length;
+          const erros = tipoUploads.filter((u) => u.status === "erro").length;
 
           return (
             <div key={t.key} className="rounded-2xl border bg-card p-3">
