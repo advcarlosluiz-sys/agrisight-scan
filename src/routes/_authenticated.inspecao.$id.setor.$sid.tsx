@@ -175,30 +175,99 @@ function ColetaPage() {
           return (
             <div key={t.key} className="rounded-2xl border bg-card p-3">
               <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Camera className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">{t.label}</span>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
                     {lista.length} {lista.length === 1 ? "foto" : "fotos"}
                   </span>
+                  {isUploading && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      <Loader2 className="h-3 w-3 animate-spin" /> enviando
+                    </span>
+                  )}
+                  {concluidos > 0 && !isUploading && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
+                      <CheckCircle2 className="h-3 w-3" /> {concluidos} enviada{concluidos > 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {erros > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                      <AlertCircle className="h-3 w-3" /> {erros} erro{erros > 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   className="h-8 px-2 text-xs"
-                  disabled={isUploading}
                   onClick={() => triggerInput(t.key)}
                 >
-                  {isUploading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar
-                    </>
-                  )}
+                  <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar
                 </Button>
               </div>
+
+              {tipoUploads.length > 0 && (
+                <div className="mb-2 space-y-1.5">
+                  {tipoUploads.map((u) => (
+                    <div key={u.id} className="rounded-lg border bg-muted/40 p-2">
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-1.5 text-[11px]">
+                          {u.status === "enviando" && (
+                            <Loader2 className="h-3 w-3 shrink-0 animate-spin text-primary" />
+                          )}
+                          {u.status === "concluido" && (
+                            <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-600" />
+                          )}
+                          {u.status === "erro" && (
+                            <AlertCircle className="h-3 w-3 shrink-0 text-destructive" />
+                          )}
+                          <span className="truncate">{u.nome}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span
+                            className={
+                              u.status === "erro"
+                                ? "text-[10px] text-destructive"
+                                : u.status === "concluido"
+                                  ? "text-[10px] text-emerald-600"
+                                  : "text-[10px] text-muted-foreground"
+                            }
+                          >
+                            {u.status === "enviando"
+                              ? `${u.progresso}%`
+                              : u.status === "concluido"
+                                ? "concluído"
+                                : "erro"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeUpload(u.id)}
+                            aria-label="Dispensar"
+                            className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                      <Progress
+                        value={u.progresso}
+                        className={
+                          u.status === "erro"
+                            ? "h-1 bg-destructive/20 [&>div]:bg-destructive"
+                            : u.status === "concluido"
+                              ? "h-1 bg-emerald-500/20 [&>div]:bg-emerald-500"
+                              : "h-1"
+                        }
+                      />
+                      {u.status === "erro" && u.erro && (
+                        <p className="mt-1 text-[10px] text-destructive">{u.erro}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-2">
                 {lista.map((f) => {
