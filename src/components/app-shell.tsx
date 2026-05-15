@@ -1,8 +1,9 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { Leaf, ArrowLeft, LogOut, Wifi, WifiOff } from "lucide-react";
+import { Leaf, ArrowLeft, LogOut, Wifi, WifiOff, CloudUpload } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useOnlineStatus } from "@/lib/use-online";
 import { Button } from "@/components/ui/button";
+import { usePendingPhotos, useSyncQueueState } from "@/lib/use-sync-queue";
 
 export function AppShell({
   title,
@@ -16,6 +17,9 @@ export function AppShell({
   const router = useRouter();
   const { signOut } = useAuth();
   const online = useOnlineStatus();
+  const pending = usePendingPhotos();
+  const { processing } = useSyncQueueState();
+  const totalPendentes = pending.length;
 
   return (
     <div className="min-h-dvh bg-background">
@@ -39,6 +43,17 @@ export function AppShell({
               {title ?? "Agrobotic Scout AI"}
             </h1>
           </div>
+          {totalPendentes > 0 && (
+            <Link
+              to="/sincronizacao"
+              className="relative flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-xs hover:bg-white/25"
+              aria-label={`${totalPendentes} itens pendentes`}
+              title="Itens aguardando sincronização"
+            >
+              <CloudUpload className={`h-3.5 w-3.5 ${processing ? "animate-pulse" : ""}`} />
+              <span>{totalPendentes}</span>
+            </Link>
+          )}
           <div
             className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${online ? "bg-success/20" : "bg-destructive/30"}`}
             title={online ? "Online" : "Offline"}
