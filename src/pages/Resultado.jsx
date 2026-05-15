@@ -7,7 +7,9 @@ import { supabase } from '../lib/supabaseClient';
 const Resultado = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const coords = location.state?.coords; // Coordenadas passadas pela página de Análise
+  const coords = location.state?.coords;
+  const aiResult = location.state?.aiResult;
+  const imageSrc = location.state?.imageSrc;
   
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -17,11 +19,11 @@ const Resultado = () => {
     
     const newItem = {
       id: Date.now(),
-      title: 'Deficiência de Cálcio (IA)',
+      title: aiResult?.titulo || 'Diagnóstico (IA)',
       location: coords ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : 'Fazenda Sorriso (Simulado)',
       date: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }),
-      status: 'crítico',
-      image: 'https://images.unsplash.com/photo-1565234141547-b1cd3e2d2a27?w=150&q=80',
+      status: aiResult?.gravidade === 'Alta' ? 'crítico' : aiResult?.gravidade === 'Média' ? 'alerta' : 'bom',
+      image: imageSrc || 'https://images.unsplash.com/photo-1565234141547-b1cd3e2d2a27?w=150&q=80',
       coords: coords // Salva as coordenadas
     };
 
@@ -75,7 +77,7 @@ const Resultado = () => {
         {/* Image with overlay badge */}
         <div className="relative mx-5 mt-4 rounded-2xl overflow-hidden" style={{ height: 200 }}>
           <img
-            src="https://images.unsplash.com/photo-1565234141547-b1cd3e2d2a27?w=400&q=80"
+            src={imageSrc || "https://images.unsplash.com/photo-1565234141547-b1cd3e2d2a27?w=400&q=80"}
             alt="Analyzed leaf"
             className="w-full h-full object-cover"
           />
@@ -97,7 +99,7 @@ const Resultado = () => {
             </span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Hanken Grotesk' }}>
-            Possível deficiência de cálcio
+            {aiResult?.titulo || 'Possível deficiência de cálcio'}
           </h2>
         </div>
 
@@ -107,16 +109,16 @@ const Resultado = () => {
             style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
             <span className="material-symbols-outlined text-gray-400 block mb-1" style={{ fontSize: 24 }}>ssid_chart</span>
             <p className="text-xs text-gray-400 mb-1">Confiança</p>
-            <p className="text-xl font-bold" style={{ color: '#c0222a' }}>82%</p>
+            <p className="text-xl font-bold" style={{ color: '#c0222a' }}>{aiResult?.confianca || 82}%</p>
             <div className="progress-bar mt-2">
-              <div className="progress-fill" style={{ width: '82%', background: '#c0222a' }} />
+              <div className="progress-fill" style={{ width: `${aiResult?.confianca || 82}%`, background: '#c0222a' }} />
             </div>
           </div>
           <div className="bg-white rounded-2xl p-4 text-center border border-gray-100"
             style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
             <span className="material-symbols-outlined text-orange-400 block mb-1" style={{ fontSize: 24 }}>warning</span>
             <p className="text-xs text-gray-400 mb-1">Gravidade</p>
-            <p className="text-xl font-bold text-orange-500">Média</p>
+            <p className="text-xl font-bold text-orange-500">{aiResult?.gravidade || 'Média'}</p>
           </div>
         </div>
 
@@ -153,7 +155,7 @@ const Resultado = () => {
             <p className="text-sm font-bold" style={{ color: '#c0222a' }}>Recomendação Especializada</p>
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Verificar irrigação, pH do solo e equilíbrio nutricional. Considerar orientação agronômica antes de aplicar fertilizantes.
+            {aiResult?.recomendacao || 'Verificar irrigação, pH do solo e equilíbrio nutricional. Considerar orientação agronômica antes de aplicar fertilizantes.'}
           </p>
         </div>
 
@@ -161,7 +163,7 @@ const Resultado = () => {
         <div className="mx-5 mb-4 bg-white rounded-2xl p-4 border border-gray-100"
           style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
           <p className="text-sm font-bold text-gray-700 mb-3">Possíveis causas</p>
-          {['pH do solo abaixo de 6.0', 'Excesso de potássio ou magnésio', 'Estresse hídrico recente'].map((cause, i) => (
+          {(aiResult?.causas || ['pH do solo abaixo de 6.0', 'Excesso de potássio ou magnésio', 'Estresse hídrico recente']).map((cause, i) => (
             <div key={i} className="flex items-start gap-2 mb-2 last:mb-0">
               <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: '#c0222a' }} />
               <p className="text-sm text-gray-600">{cause}</p>

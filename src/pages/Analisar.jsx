@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import TopBar from '../components/TopBar';
 import BottomNav from '../components/BottomNav';
 import { useNavigate } from 'react-router-dom';
+import { analyzePlantImage } from '../lib/geminiClient';
 
 const scanModes = [
   { id: 'folha', icon: 'eco', label: 'Folha' },
@@ -16,6 +17,7 @@ const Analisar = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [imageSrc, setImageSrc] = useState(null);
   const [coords, setCoords] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
   const fileRef = useRef();
 
   // Busca o GPS assim que a tela de Análise é aberta
@@ -33,6 +35,7 @@ const Analisar = () => {
   }, []);
 
   const handleFileChange = (e) => {
+    setErrorMsg('');
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
@@ -41,13 +44,30 @@ const Analisar = () => {
     }
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
+    if (!imageSrc) {
+      setErrorMsg("Por favor, capture ou envie uma imagem primeiro.");
+      return;
+    }
+
     setAnalyzing(true);
-    setTimeout(() => {
-      setAnalyzing(false);
-      // Passa as coordenadas capturadas para a página de Resultados
-      navigate('/resultado', { state: { coords } });
-    }, 2200);
+    setErrorMsg('');
+
+    const result = await analyzePlantImage(imageSrc);
+    setAnalyzing(false);
+
+    if (result.error) {
+      setErrorMsg(result.error);
+      return;
+    }
+
+    if (!result.valido) {
+      setErrorMsg(result.mensagem || "Imagem inválida. Por favor, aponte para uma planta.");
+      return;
+    }
+
+    // Se válido, passa os dados da IA e as coordenadas para a tela de resultado
+    navigate('/resultado', { state: { coords, aiResult: result, imageSrc } });
   };
 
   return (
@@ -145,6 +165,14 @@ const Analisar = () => {
             </div>
           </div>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+
+          {/* Error Message */}
+          {errorMsg && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2">
+              <span className="material-symbols-outlined text-red-500" style={{ fontSize: 20 }}>error</span>
+              <p className="text-sm text-red-600 font-medium">{errorMsg}</p>
+            </div>
+          )}
 
           {/* Analyze button */}
           <button
