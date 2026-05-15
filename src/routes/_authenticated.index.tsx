@@ -3,20 +3,21 @@ import {
   ClipboardList,
   PlayCircle,
   History,
-  RefreshCw,
+  CloudUpload,
   Settings,
   LayoutDashboard,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { usePendingPhotos } from "@/lib/use-sync-queue";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: HomePage,
 });
 
 function HomePage() {
+  const pendentesFila = usePendingPhotos();
   const { data: pendente } = useQuery({
     queryKey: ["pendente"],
     queryFn: async () => {
@@ -70,19 +71,22 @@ function HomePage() {
             </div>
           </Link>
         ))}
-        <button
-          type="button"
-          onClick={() => toast.success("Dados sincronizados")}
+        <Link
+          to="/sincronizacao"
           className="flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-card transition active:scale-[0.99]"
         >
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary">
-            <RefreshCw className="h-6 w-6" />
+            <CloudUpload className="h-6 w-6" />
           </div>
           <div className="flex-1 text-left">
-            <div className="font-semibold">Sincronizar Dados</div>
-            <div className="text-xs text-muted-foreground">Envia inspeções pendentes</div>
+            <div className="font-semibold">Sincronização</div>
+            <div className="text-xs text-muted-foreground">
+              {pendentesFila.length === 0
+                ? "Tudo enviado"
+                : `${pendentesFila.length} pendente${pendentesFila.length > 1 ? "s" : ""} na fila`}
+            </div>
           </div>
-        </button>
+        </Link>
       </div>
     </AppShell>
   );

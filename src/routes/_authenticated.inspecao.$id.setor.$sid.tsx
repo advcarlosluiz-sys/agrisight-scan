@@ -8,7 +8,11 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Camera, Loader2, Plus, Trash2, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { Camera, Loader2, Plus, Trash2, CheckCircle2, AlertCircle, X, CloudOff, RefreshCw } from "lucide-react";
+import { useOnlineStatus } from "@/lib/use-online";
+import { enqueuePhoto, retryPendingPhoto, scheduleProcess } from "@/lib/sync-queue";
+import { usePendingPhotos } from "@/lib/use-sync-queue";
+import { deletePendingPhoto } from "@/lib/sync-queue";
 
 const TIPOS = [
   { key: "geral", label: "Geral" },
@@ -38,6 +42,8 @@ export const Route = createFileRoute("/_authenticated/inspecao/$id/setor/$sid")(
 function ColetaPage() {
   const { id, sid } = useParams({ from: "/_authenticated/inspecao/$id/setor/$sid" });
   const navigate = useNavigate();
+  const online = useOnlineStatus();
+  const pendingDaInspecao = usePendingPhotos(id);
   const [temp, setTemp] = useState("");
   const [umid, setUmid] = useState("");
   const [lum, setLum] = useState("");
@@ -86,7 +92,45 @@ function ColetaPage() {
 
   const fotosPorTipo = (tipo: TipoKey) => (fotos ?? []).filter((f) => f.tipo_foto === tipo);
 
+  // Quando há itens na fila desta inspeção, faz polling leve para atualizar a grade
+  // assim que a fila concluir o envio.
+  useEffect(() => {
+    if (pendingDaInspecao.length === 0) return;
+    const t = setInterval(() => refetchFotos(), 4000);
+    return () => clearInterval(t);
+  }, [pendingDaInspecao.length, refetchFotos]);
+
+  const enviarParaFila = async (tipo: TipoKey, file: File, motivo: "offline" | "erro") => {
+    try {
+      const orgRes = await supabase.rpc("current_org_id");
+      const orgId = orgRes.data;
+      if (!orgId) throw new Error("Organização não encontrada (faça login novamente)");
+      await enqueuePhoto({
+        inspecao_id: id,
+        organizacao_id: orgId,
+        tipo_foto: tipo,
+        file,
+        nome: file.name,
+      });
+      toast.message(
+        motivo === "offline"
+          ? "Foto salva offline — será enviada ao reconectar"
+          : "Falha no envio — adicionada à fila para retry",
+      );
+    } catch (e) {
+      // Fallback final: tentar guardar mesmo sem orgId travaria a fila no envio.
+      // Sem org, mostramos erro claro.
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar offline");
+    }
+  };
+
   const upload = async (tipo: TipoKey, file: File) => {
+    // Caminho offline: vai direto para a fila
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      await enviarParaFila(tipo, file, "offline");
+      return;
+    }
+
     const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setUploads((prev) => [
       ...prev,
@@ -113,9 +157,9 @@ function ColetaPage() {
       refetchFotos();
       setTimeout(() => removeUpload(uid), 2500);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro";
-      updateUpload(uid, { status: "erro", progresso: 100, erro: msg });
-      toast.error(msg);
+      // Falha online → joga para a fila com retry automático
+      removeUpload(uid);
+      await enviarParaFila(tipo, file, "erro");
     }
   };
 
@@ -158,6 +202,73 @@ function ColetaPage() {
         <p className="text-xs uppercase opacity-80">Setor atual</p>
         <p className="text-2xl font-bold">{setor?.codigo ?? "..."}</p>
       </div>
+
+      {!online && (
+        <div className="mb-3 flex items-start gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+          <CloudOff className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="text-xs">
+            <p className="font-semibold">Você está offline</p>
+            <p>As fotos serão salvas no aparelho e enviadas automaticamente quando a conexão voltar.</p>
+          </div>
+        </div>
+      )}
+
+      {pendingDaInspecao.length > 0 && (
+        <div className="mb-3 rounded-2xl border bg-card p-3 shadow-card">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-semibold">Fila de envio ({pendingDaInspecao.length})</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={() => scheduleProcess(0)}
+              disabled={!online}
+            >
+              <RefreshCw className="mr-1 h-3 w-3" /> Sincronizar
+            </Button>
+          </div>
+          <ul className="space-y-1.5">
+            {pendingDaInspecao.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center gap-2 rounded-lg border bg-muted/40 p-2 text-[11px]"
+              >
+                {p.status === "enviando" ? (
+                  <Loader2 className="h-3 w-3 shrink-0 animate-spin text-primary" />
+                ) : p.status === "erro" ? (
+                  <AlertCircle className="h-3 w-3 shrink-0 text-destructive" />
+                ) : (
+                  <CloudOff className="h-3 w-3 shrink-0 text-muted-foreground" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate">
+                    <span className="font-medium">{p.tipo_foto}</span> · {p.nome}
+                  </p>
+                  {p.last_error && (
+                    <p className="truncate text-destructive">{p.last_error}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => retryPendingPhoto(p.id)}
+                  className="rounded p-1 text-muted-foreground hover:text-primary"
+                  aria-label="Tentar agora"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deletePendingPhoto(p.id)}
+                  className="rounded p-1 text-muted-foreground hover:text-destructive"
+                  aria-label="Remover"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <h3 className="mb-2 text-sm font-semibold">Fotos</h3>
       <p className="mb-3 text-xs text-muted-foreground">
