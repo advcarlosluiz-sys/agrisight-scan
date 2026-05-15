@@ -19,7 +19,10 @@ export function useSyncQueueState() {
   const [processing, setProcessing] = useState(false);
   useEffect(() => {
     initSyncQueue();
-    return subscribeSyncQueue((s) => setProcessing(s.processing));
+    const unsub = subscribeSyncQueue((s) => setProcessing(s.processing));
+    return () => {
+      unsub();
+    };
   }, []);
   return { processing };
 }
