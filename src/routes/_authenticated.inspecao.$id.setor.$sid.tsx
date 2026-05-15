@@ -92,7 +92,45 @@ function ColetaPage() {
 
   const fotosPorTipo = (tipo: TipoKey) => (fotos ?? []).filter((f) => f.tipo_foto === tipo);
 
+  // Quando há itens na fila desta inspeção, faz polling leve para atualizar a grade
+  // assim que a fila concluir o envio.
+  useEffect(() => {
+    if (pendingDaInspecao.length === 0) return;
+    const t = setInterval(() => refetchFotos(), 4000);
+    return () => clearInterval(t);
+  }, [pendingDaInspecao.length, refetchFotos]);
+
+  const enviarParaFila = async (tipo: TipoKey, file: File, motivo: "offline" | "erro") => {
+    try {
+      const orgRes = await supabase.rpc("current_org_id");
+      const orgId = orgRes.data;
+      if (!orgId) throw new Error("Organização não encontrada (faça login novamente)");
+      await enqueuePhoto({
+        inspecao_id: id,
+        organizacao_id: orgId,
+        tipo_foto: tipo,
+        file,
+        nome: file.name,
+      });
+      toast.message(
+        motivo === "offline"
+          ? "Foto salva offline — será enviada ao reconectar"
+          : "Falha no envio — adicionada à fila para retry",
+      );
+    } catch (e) {
+      // Fallback final: tentar guardar mesmo sem orgId travaria a fila no envio.
+      // Sem org, mostramos erro claro.
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar offline");
+    }
+  };
+
   const upload = async (tipo: TipoKey, file: File) => {
+    // Caminho offline: vai direto para a fila
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      await enviarParaFila(tipo, file, "offline");
+      return;
+    }
+
     const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setUploads((prev) => [
       ...prev,
@@ -119,9 +157,9 @@ function ColetaPage() {
       refetchFotos();
       setTimeout(() => removeUpload(uid), 2500);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro";
-      updateUpload(uid, { status: "erro", progresso: 100, erro: msg });
-      toast.error(msg);
+      // Falha online → joga para a fila com retry automático
+      removeUpload(uid);
+      await enviarParaFila(tipo, file, "erro");
     }
   };
 
