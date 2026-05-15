@@ -203,6 +203,73 @@ function ColetaPage() {
         <p className="text-2xl font-bold">{setor?.codigo ?? "..."}</p>
       </div>
 
+      {!online && (
+        <div className="mb-3 flex items-start gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+          <CloudOff className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="text-xs">
+            <p className="font-semibold">Você está offline</p>
+            <p>As fotos serão salvas no aparelho e enviadas automaticamente quando a conexão voltar.</p>
+          </div>
+        </div>
+      )}
+
+      {pendingDaInspecao.length > 0 && (
+        <div className="mb-3 rounded-2xl border bg-card p-3 shadow-card">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-semibold">Fila de envio ({pendingDaInspecao.length})</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={() => scheduleProcess(0)}
+              disabled={!online}
+            >
+              <RefreshCw className="mr-1 h-3 w-3" /> Sincronizar
+            </Button>
+          </div>
+          <ul className="space-y-1.5">
+            {pendingDaInspecao.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center gap-2 rounded-lg border bg-muted/40 p-2 text-[11px]"
+              >
+                {p.status === "enviando" ? (
+                  <Loader2 className="h-3 w-3 shrink-0 animate-spin text-primary" />
+                ) : p.status === "erro" ? (
+                  <AlertCircle className="h-3 w-3 shrink-0 text-destructive" />
+                ) : (
+                  <CloudOff className="h-3 w-3 shrink-0 text-muted-foreground" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate">
+                    <span className="font-medium">{p.tipo_foto}</span> · {p.nome}
+                  </p>
+                  {p.last_error && (
+                    <p className="truncate text-destructive">{p.last_error}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => retryPendingPhoto(p.id)}
+                  className="rounded p-1 text-muted-foreground hover:text-primary"
+                  aria-label="Tentar agora"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deletePendingPhoto(p.id)}
+                  className="rounded p-1 text-muted-foreground hover:text-destructive"
+                  aria-label="Remover"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <h3 className="mb-2 text-sm font-semibold">Fotos</h3>
       <p className="mb-3 text-xs text-muted-foreground">
         Você pode adicionar várias fotos para cada tipo.
