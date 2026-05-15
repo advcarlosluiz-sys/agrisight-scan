@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
+import { Route as AuthenticatedSincronizacaoRouteImport } from './routes/_authenticated.sincronizacao'
 import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated.historico'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated.configuracoes'
@@ -37,6 +38,12 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSincronizacaoRoute =
+  AuthenticatedSincronizacaoRouteImport.update({
+    id: '/sincronizacao',
+    path: '/sincronizacao',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
   id: '/historico',
   path: '/historico',
@@ -102,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/historico': typeof AuthenticatedHistoricoRoute
+  '/sincronizacao': typeof AuthenticatedSincronizacaoRoute
   '/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
   '/relatorio/$id': typeof AuthenticatedRelatorioIdRoute
   '/inspecao/$id/analisando': typeof AuthenticatedInspecaoIdAnalisandoRoute
@@ -115,6 +123,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/historico': typeof AuthenticatedHistoricoRoute
+  '/sincronizacao': typeof AuthenticatedSincronizacaoRoute
   '/': typeof AuthenticatedIndexRoute
   '/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
   '/relatorio/$id': typeof AuthenticatedRelatorioIdRoute
@@ -131,6 +140,7 @@ export interface FileRoutesById {
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
+  '/_authenticated/sincronizacao': typeof AuthenticatedSincronizacaoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
   '/_authenticated/relatorio/$id': typeof AuthenticatedRelatorioIdRoute
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/historico'
+    | '/sincronizacao'
     | '/inspecao/nova'
     | '/relatorio/$id'
     | '/inspecao/$id/analisando'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/historico'
+    | '/sincronizacao'
     | '/'
     | '/inspecao/nova'
     | '/relatorio/$id'
@@ -176,6 +188,7 @@ export interface FileRouteTypes {
     | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
     | '/_authenticated/historico'
+    | '/_authenticated/sincronizacao'
     | '/_authenticated/'
     | '/_authenticated/inspecao/nova'
     | '/_authenticated/relatorio/$id'
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/sincronizacao': {
+      id: '/_authenticated/sincronizacao'
+      path: '/sincronizacao'
+      fullPath: '/sincronizacao'
+      preLoaderRoute: typeof AuthenticatedSincronizacaoRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/historico': {
@@ -291,6 +311,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
+  AuthenticatedSincronizacaoRoute: typeof AuthenticatedSincronizacaoRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedInspecaoNovaRoute: typeof AuthenticatedInspecaoNovaRoute
   AuthenticatedRelatorioIdRoute: typeof AuthenticatedRelatorioIdRoute
@@ -305,6 +326,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
+  AuthenticatedSincronizacaoRoute: AuthenticatedSincronizacaoRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedInspecaoNovaRoute: AuthenticatedInspecaoNovaRoute,
   AuthenticatedRelatorioIdRoute: AuthenticatedRelatorioIdRoute,
@@ -328,3 +350,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
