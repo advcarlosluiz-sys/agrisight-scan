@@ -9,7 +9,7 @@ export const analyzePlantImage = async (base64Image) => {
   // Remove o prefixo data:image/jpeg;base64, se existir
   const base64Data = base64Image.split(',')[1] || base64Image;
 
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   const prompt = `Você é a "Berry Grow AI", uma assistente de diagnóstico agrícola.
 Analise a imagem fornecida.
