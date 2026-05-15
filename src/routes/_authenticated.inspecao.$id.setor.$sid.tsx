@@ -42,6 +42,8 @@ export const Route = createFileRoute("/_authenticated/inspecao/$id/setor/$sid")(
 function ColetaPage() {
   const { id, sid } = useParams({ from: "/_authenticated/inspecao/$id/setor/$sid" });
   const navigate = useNavigate();
+  const online = useOnlineStatus();
+  const pendingDaInspecao = usePendingPhotos(id);
   const [temp, setTemp] = useState("");
   const [umid, setUmid] = useState("");
   const [lum, setLum] = useState("");
