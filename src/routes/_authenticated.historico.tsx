@@ -38,9 +38,9 @@ function HistoricoPage() {
   const navigate = useNavigate({ from: "/historico" });
   usePersistedFilter("historico:filtro", filtro, "todos", "/historico");
   const setFiltro = (f: Filtro) =>
-    navigate({ search: (prev) => ({ ...prev, filtro: f }), replace: true });
+    navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, filtro: f }), replace: true });
   const setQ = (v: string) =>
-    navigate({ search: (prev) => ({ ...prev, q: v }), replace: true });
+    navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, q: v }), replace: true });
 
   const { data } = useQuery({
     queryKey: ["historico"],
