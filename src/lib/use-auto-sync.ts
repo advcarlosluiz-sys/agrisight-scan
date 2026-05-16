@@ -3,14 +3,16 @@ import { toast } from "sonner";
 import { useConnection } from "@/lib/use-online";
 import { usePendingPhotos } from "@/lib/use-sync-queue";
 import { syncNow } from "@/lib/sync-queue";
+import { usePreferences, isWifiConnection } from "@/lib/preferences";
 
 /**
  * Observa transições offline → online e dispara sincronização automática
- * da fila pendente, com feedback via toast. Montado uma única vez no AppShell.
+ * da fila pendente, respeitando preferências do usuário (autoSync, wifiOnly).
  */
 export function useAutoSync() {
   const { status } = useConnection();
   const pending = usePendingPhotos();
+  const prefs = usePreferences();
   const prevStatus = useRef(status);
   const running = useRef(false);
 
@@ -18,30 +20,46 @@ export function useAutoSync() {
     const wasOffline = prevStatus.current === "offline";
     prevStatus.current = status;
 
+    if (!prefs.autoSync) return;
     if (status !== "online") return;
     if (!wasOffline) return;
     if (pending.length === 0) return;
     if (running.current) return;
 
+    if (prefs.wifiOnly) {
+      const wifi = isWifiConnection();
+      if (wifi === false) {
+        if (prefs.notifyOnSync) {
+          toast.message("Sincronização pausada — aguardando Wi-Fi", {
+            description: `${pending.length} item(s) na fila`,
+          });
+        }
+        return;
+      }
+    }
+
     running.current = true;
     const total = pending.length;
     const p = syncNow();
-    toast.promise(p, {
-      loading: `Conexão restaurada — enviando ${total} item${total > 1 ? "s" : ""}…`,
-      success: (r) => {
-        if (r.falhas === 0 && r.restantes === 0) {
-          return `${r.enviados} item${r.enviados !== 1 ? "s" : ""} sincronizado${r.enviados !== 1 ? "s" : ""} automaticamente`;
-        }
-        const partes: string[] = [];
-        if (r.enviados) partes.push(`${r.enviados} enviado${r.enviados !== 1 ? "s" : ""}`);
-        if (r.falhas) partes.push(`${r.falhas} com falha`);
-        if (r.restantes) partes.push(`${r.restantes} na fila`);
-        return partes.join(" · ");
-      },
-      error: (e) => (e instanceof Error ? e.message : "Falha ao sincronizar"),
-    });
+    if (prefs.notifyOnSync) {
+      toast.promise(p, {
+        loading: `Conexão restaurada — enviando ${total} item${total > 1 ? "s" : ""}…`,
+        success: (r) => {
+          if (r.falhas === 0 && r.restantes === 0) {
+            return `${r.enviados} item${r.enviados !== 1 ? "s" : ""} sincronizado${r.enviados !== 1 ? "s" : ""} automaticamente`;
+          }
+          const partes: string[] = [];
+          if (r.enviados) partes.push(`${r.enviados} enviado${r.enviados !== 1 ? "s" : ""}`);
+          if (r.falhas) partes.push(`${r.falhas} com falha`);
+          if (r.restantes) partes.push(`${r.restantes} na fila`);
+          return partes.join(" · ");
+        },
+        error: (e) => (e instanceof Error ? e.message : "Falha ao sincronizar"),
+      });
+    }
     p.finally(() => {
       running.current = false;
     });
-  }, [status, pending.length]);
+  }, [status, pending.length, prefs.autoSync, prefs.wifiOnly, prefs.notifyOnSync]);
 }
+
