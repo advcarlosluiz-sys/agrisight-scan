@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { StatusProcessoBadge, useStatusProcesso } from "@/components/status-processo-badge";
+import { StatusProcessoBadge, useStatusProcesso, useSyncStatusRoute } from "@/components/status-processo-badge";
 
 type FotoStatus = "pendente" | "carregada" | "enviada";
 type FotoItem = { id: string; legenda: string | null; url: string | null; status: FotoStatus };
@@ -102,6 +102,9 @@ function AnalisandoPage() {
   const canceladoRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const statusProcesso = useStatusProcesso(id);
+  // Mantém a tela sincronizada com o status real (redireciona se concluída
+  // ou se voltou para em_andamento/cancelada em outra aba).
+  useSyncStatusRoute(id);
 
   const marcarStatus = (fotoId: string, status: FotoStatus) =>
     setFotos((prev) => prev.map((f) => (f.id === fotoId ? { ...f, status } : f)));
