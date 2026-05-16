@@ -137,6 +137,45 @@ function NovaInspecao() {
           Iniciar Inspeção
         </Button>
       </div>
+
+      <div className="mt-6">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Inspeções recentes
+          </h3>
+          <span className="text-[10px] text-muted-foreground">Atualiza em tempo real</span>
+        </div>
+        {recentes && recentes.length > 0 ? (
+          <div className="space-y-2">
+            {recentes.map((r) => {
+              const destino =
+                r.status_processo === "analisando"
+                  ? ("/inspecao/$id/analisando" as const)
+                  : r.status_processo === "concluida"
+                  ? ("/inspecao/$id/resultado" as const)
+                  : ("/inspecao/$id/observacoes" as const);
+              return (
+                <Link
+                  key={r.id}
+                  to={destino}
+                  params={{ id: r.id }}
+                  className="flex items-center justify-between gap-2 rounded-xl border bg-card p-3 transition active:scale-[0.99]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm">
+                      Setor {r.setor?.codigo ?? "—"} ·{" "}
+                      {new Date(r.data_inspecao).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  <StatusProcessoBadge status={r.status_processo} />
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Ainda não há inspeções recentes.</p>
+        )}
+      </div>
     </AppShell>
   );
 }
