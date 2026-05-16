@@ -220,6 +220,75 @@ function AnalisandoPage() {
               </div>
             </div>
 
+            {fotos.length > 0 && (
+              <div className="w-full max-w-sm space-y-2 text-left">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Fotos da inspeção</span>
+                  <span>
+                    {fotos.filter((f) => f.status === "enviada").length}/{fotos.length} enviadas à IA
+                  </span>
+                </div>
+                <ul className="grid grid-cols-3 gap-2">
+                  {fotos.map((f, i) => {
+                    const enviada = f.status === "enviada";
+                    const carregada = f.status === "carregada" || enviada;
+                    return (
+                      <li
+                        key={f.id}
+                        className={cn(
+                          "relative aspect-square overflow-hidden rounded-lg border bg-muted",
+                          enviada && "ring-2 ring-primary",
+                        )}
+                      >
+                        {f.url ? (
+                          <img
+                            src={f.url}
+                            alt={f.legenda ?? `Foto ${i + 1}`}
+                            className={cn(
+                              "h-full w-full object-cover transition-opacity",
+                              !carregada && "opacity-40",
+                            )}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                            <ImageIcon className="h-5 w-5" />
+                          </div>
+                        )}
+                        <span
+                          className={cn(
+                            "absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] shadow",
+                            enviada
+                              ? "bg-primary text-primary-foreground"
+                              : carregada
+                                ? "bg-card text-foreground"
+                                : "bg-muted text-muted-foreground",
+                          )}
+                          title={
+                            enviada
+                              ? "Enviada para a IA"
+                              : carregada
+                                ? "Carregada"
+                                : "Aguardando"
+                          }
+                        >
+                          {enviada ? (
+                            <Check className="h-3 w-3" />
+                          ) : carregada ? (
+                            <Upload className="h-3 w-3" />
+                          ) : (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
+                        </span>
+                        <span className="absolute inset-x-0 bottom-0 truncate bg-black/45 px-1 py-0.5 text-[10px] text-white">
+                          {enviada ? "Enviada" : carregada ? "Carregada" : "Aguardando"}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
             <Button variant="outline" onClick={cancelar} className="mt-2 w-full max-w-sm">
               Cancelar análise
             </Button>
