@@ -43,6 +43,31 @@ function AnalisandoPage() {
 
     (async () => {
       try {
+        // Se a análise já foi concluída (ex.: outra aba), pula direto p/ resultado.
+        const { data: insp } = await supabase
+          .from("inspecoes")
+          .select("status_processo")
+          .eq("id", id)
+          .maybeSingle();
+        if (canceladoRef.current) return;
+        const sp = insp?.status_processo as string | undefined;
+        if (sp === "concluida") {
+          navigate({ to: "/inspecao/$id/resultado", params: { id }, replace: true });
+          return;
+        }
+        if (sp === "cancelada") {
+          navigate({ to: "/inspecao/$id/observacoes", params: { id }, replace: true });
+          return;
+        }
+        // Garante o marcador "analisando" (útil quando entramos via reload direto).
+        if (sp !== "analisando") {
+          await supabase
+            .from("inspecoes")
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .update({ status_processo: "analisando" } as any)
+            .eq("id", id);
+        }
+
         // Salvaguarda: bloqueia análise sem fotos persistidas
         const { count, error: countErr } = await supabase
           .from("fotos_inspecao")

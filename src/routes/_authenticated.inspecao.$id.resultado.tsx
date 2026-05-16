@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useRedirectIfAnalisando } from "@/components/status-processo-badge";
 import { useAuth } from "@/lib/auth-context";
 import { AlertTriangle, BellPlus, CheckCircle2, FileText, ListChecks, RefreshCw, Sparkles, UserCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
 
 function ResultadoPage() {
   const { id } = useParams({ from: "/_authenticated/inspecao/$id/resultado" });
+  useRedirectIfAnalisando(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [reanalisando, setReanalisando] = useState(false);

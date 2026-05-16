@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
@@ -93,6 +94,25 @@ export function useStatusProcesso(inspecaoId: string) {
       supabase.removeChannel(channel);
     };
   }, [inspecaoId]);
+
+  return status;
+}
+
+/**
+ * Redireciona automaticamente para a tela de análise quando o
+ * status_processo da inspeção é "analisando". Permite retomar o
+ * acompanhamento após um reload em qualquer página do fluxo.
+ */
+export function useRedirectIfAnalisando(inspecaoId: string) {
+  const status = useStatusProcesso(inspecaoId);
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  useEffect(() => {
+    if (status !== "analisando") return;
+    if (pathname.endsWith("/analisando")) return;
+    navigate({ to: "/inspecao/$id/analisando", params: { id: inspecaoId }, replace: true });
+  }, [status, pathname, inspecaoId, navigate]);
 
   return status;
 }
