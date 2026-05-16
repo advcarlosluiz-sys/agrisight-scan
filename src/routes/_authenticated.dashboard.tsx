@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { CopyFilterLinkButton } from "@/components/copy-filter-link-button";
 import { StatusPill, STATUS_DOT } from "@/components/status-pill";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
+import { AcoesPorStatus } from "@/components/acoes-por-status";
 import { supabase } from "@/integrations/supabase/client";
 import { usePersistedFilter } from "@/hooks/use-persisted-filter";
 import { cn } from "@/lib/utils";
