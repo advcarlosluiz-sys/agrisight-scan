@@ -23,6 +23,7 @@ export function AppShell({
   const pending = usePendingPhotos();
   const { processing } = useSyncQueueState();
   const totalPendentes = pending.length;
+  const solicPend = useSolicitacoesPendentes();
   useAutoSync();
 
   return (
