@@ -419,6 +419,14 @@ function AnalisandoPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>{ETAPAS[etapa]}</span>
               </div>
+              {tentativa > 1 && (
+                <p
+                  role="status"
+                  className="text-center text-[11px] text-amber-700 dark:text-amber-400"
+                >
+                  Reprocessando após falha temporária — tentativa {tentativa} de {MAX_TENTATIVAS}
+                </p>
+              )}
             </div>
 
             {fotos.length > 0 && (
