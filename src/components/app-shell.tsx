@@ -59,6 +59,19 @@ export function AppShell({
               <span>{totalPendentes}</span>
             </Link>
           )}
+          <Link
+            to="/solicitacoes"
+            className="relative rounded-full p-1.5 hover:bg-white/10"
+            aria-label={solicPend > 0 ? `${solicPend} solicitações pendentes` : "Solicitações"}
+            title="Solicitações de agrônomo"
+          >
+            <Bell className="h-4 w-4" />
+            {solicPend > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
+                {solicPend > 9 ? "9+" : solicPend}
+              </span>
+            )}
+          </Link>
           <div
             className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
               status === "online"
