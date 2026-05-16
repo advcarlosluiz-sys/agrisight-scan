@@ -102,16 +102,51 @@ export function useStatusProcesso(inspecaoId: string) {
  * Redireciona automaticamente para a tela de análise quando o
  * status_processo da inspeção é "analisando". Permite retomar o
  * acompanhamento após um reload em qualquer página do fluxo.
+ *
+ * Mantido como wrapper sobre useSyncStatusRoute para compatibilidade.
  */
 export function useRedirectIfAnalisando(inspecaoId: string) {
+  return useSyncStatusRoute(inspecaoId);
+}
+
+/**
+ * Hook canônico: lê o status_processo atual (com realtime) e, sempre que
+ * ele divergir da tela em que o usuário está, navega para a tela correta:
+ *   - analisando  → /inspecao/$id/analisando
+ *   - concluida   → /inspecao/$id/resultado
+ *   - em_andamento / cancelada → /inspecao/$id/observacoes
+ *
+ * A página de preview-ia é considerada parte do fluxo "analisando/concluida"
+ * (revisão antes de salvar) e não é redirecionada automaticamente, exceto
+ * quando volta a "analisando" (retomada de execução).
+ */
+export function useSyncStatusRoute(inspecaoId: string) {
   const status = useStatusProcesso(inspecaoId);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    if (status !== "analisando") return;
-    if (pathname.endsWith("/analisando")) return;
-    navigate({ to: "/inspecao/$id/analisando", params: { id: inspecaoId }, replace: true });
+    if (!status) return;
+    const base = `/inspecao/${inspecaoId}`;
+    const emObservacoes = pathname.endsWith("/observacoes");
+    const emAnalisando = pathname.endsWith("/analisando");
+    const emResultado = pathname.endsWith("/resultado");
+    const emPreview = pathname.endsWith("/preview-ia");
+    // Só interfere se estamos dentro do fluxo desta inspeção.
+    if (!pathname.startsWith(base)) return;
+
+    if (status === "analisando" && !emAnalisando) {
+      navigate({ to: "/inspecao/$id/analisando", params: { id: inspecaoId }, replace: true });
+      return;
+    }
+    if (status === "concluida" && !emResultado && !emPreview) {
+      navigate({ to: "/inspecao/$id/resultado", params: { id: inspecaoId }, replace: true });
+      return;
+    }
+    if ((status === "em_andamento" || status === "cancelada") && (emAnalisando || emResultado)) {
+      navigate({ to: "/inspecao/$id/observacoes", params: { id: inspecaoId }, replace: true });
+      return;
+    }
   }, [status, pathname, inspecaoId, navigate]);
 
   return status;
