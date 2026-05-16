@@ -30,7 +30,7 @@ export function isCancelling() {
 
 export function subscribeSyncQueue(l: Listener) {
   listeners.add(l);
-  l({ processing });
+  l({ processing, cancelling: cancelRequested });
   return () => listeners.delete(l);
 }
 
