@@ -293,6 +293,8 @@ function ColetaPage() {
           const isUploading = tipoUploads.some((u) => u.status === "enviando");
           const concluidos = tipoUploads.filter((u) => u.status === "concluido").length;
           const erros = tipoUploads.filter((u) => u.status === "erro").length;
+          const restante = restantePorTipo(t.key);
+          const noLimite = restante === 0;
 
           return (
             <div key={t.key} className="rounded-2xl border bg-card p-3">
@@ -300,8 +302,16 @@ function ColetaPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Camera className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">{t.label}</span>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                    {lista.length} {lista.length === 1 ? "foto" : "fotos"}
+                  <span
+                    className={
+                      "rounded-full px-2 py-0.5 text-[11px] " +
+                      (noLimite
+                        ? "bg-amber-500/15 font-medium text-amber-700 dark:text-amber-400"
+                        : "bg-muted text-muted-foreground")
+                    }
+                    aria-label={`${lista.length} de ${MAX_POR_TIPO} fotos`}
+                  >
+                    {lista.length}/{MAX_POR_TIPO}
                   </span>
                   {isUploading && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
@@ -325,10 +335,25 @@ function ColetaPage() {
                   variant="outline"
                   className="h-8 px-2 text-xs"
                   onClick={() => triggerInput(t.key)}
+                  disabled={noLimite}
+                  title={noLimite ? `Limite de ${MAX_POR_TIPO} fotos atingido` : undefined}
                 >
                   <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar
                 </Button>
               </div>
+
+              {noLimite && (
+                <div
+                  role="status"
+                  className="mb-2 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                  <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                  <span>
+                    Limite de {MAX_POR_TIPO} fotos atingido neste tipo. Remova alguma para adicionar
+                    novas.
+                  </span>
+                </div>
+              )}
 
               {tipoUploads.length > 0 && (
                 <div className="mb-2 space-y-1.5">
