@@ -7,8 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Camera, AlertTriangle, Info } from "lucide-react";
 import { StatusProcessoBadge, useStatusProcesso } from "@/components/status-processo-badge";
+import { useInspecaoFotos } from "@/lib/use-inspecao-fotos";
+import { useOnlineStatus } from "@/lib/use-online";
 
 const OBS = [
   ["mato_alto", "Mato alto"],
