@@ -23,6 +23,10 @@ const TIPOS = [
   { key: "plastico", label: "Plástico/Túnel" },
 ] as const;
 
+// Limite de fotos por tipo. Mantém o custo da IA previsível e evita
+// estourar o tamanho do payload enviado para a Edge Function.
+const MAX_POR_TIPO = 8;
+
 type TipoKey = (typeof TIPOS)[number]["key"];
 type FotoRow = { id: string; tipo_foto: TipoKey; storage_path: string };
 type UploadStatus = "enviando" | "concluido" | "erro";
