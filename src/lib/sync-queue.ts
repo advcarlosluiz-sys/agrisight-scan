@@ -183,21 +183,19 @@ export interface SyncResult {
   enviados: number;
   falhas: number;
   restantes: number;
+  cancelado: boolean;
 }
 
 /**
  * Força sincronização imediata (ignora backoff) e retorna o resultado agregado.
- * Útil para o botão "Sincronizar agora" com feedback ao usuário.
  */
 export async function syncNow(): Promise<SyncResult> {
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     throw new Error("Sem conexão com a internet");
   }
-  // espera processamento atual terminar
   while (processing) {
     await new Promise((r) => setTimeout(r, 100));
   }
-  // reagenda todos os pendentes para agora (ignora backoff)
   const all = await offlineDB.pendingPhotos.where("status").notEqual("enviando").toArray();
   await offlineDB.pendingPhotos.bulkPut(
     all.map((p) => ({
@@ -211,9 +209,15 @@ export async function syncNow(): Promise<SyncResult> {
   let enviados = 0;
   let falhas = 0;
   processing = true;
+  cancelRequested = false;
   emit();
+  let cancelado = false;
   try {
     while (true) {
+      if (cancelRequested) {
+        cancelado = true;
+        break;
+      }
       const next = await offlineDB.pendingPhotos.where("status").equals("pendente").first();
       if (!next) break;
       await offlineDB.pendingPhotos.update(next.id, { status: "enviando", last_error: undefined });
@@ -238,10 +242,11 @@ export async function syncNow(): Promise<SyncResult> {
     }
   } finally {
     processing = false;
+    cancelRequested = false;
     emit();
   }
   const restantes = await offlineDB.pendingPhotos.count();
-  return { enviados, falhas, restantes };
+  return { enviados, falhas, restantes, cancelado };
 }
 
 let initialized = false;
@@ -251,10 +256,8 @@ export function initSyncQueue() {
   window.addEventListener("online", () => {
     scheduleProcess(200);
   });
-  // retry leves enquanto a aba estiver aberta
   setInterval(() => {
-    if (navigator.onLine) scheduleProcess(0);
+    if (navigator.onLine && Date.now() >= pauseUntil) scheduleProcess(0);
   }, 30_000);
-  // dispara já no boot
   scheduleProcess(500);
 }
