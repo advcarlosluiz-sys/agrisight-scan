@@ -89,10 +89,23 @@ function ColetaPage() {
     queryFn: async (): Promise<FotoRow[]> =>
       (((await supabase
         .from("fotos_inspecao")
-        .select("id, tipo_foto, storage_path")
+        .select("id, tipo_foto, storage_path, ordem")
         .eq("inspecao_id", id)
+        .order("ordem", { ascending: true })
         .order("created_at", { ascending: true })).data ?? []) as FotoRow[]),
   });
+
+  // Estado local de ordem por tipo — atualizado otimisticamente no drag-end
+  // e ressincronizado quando a lista do servidor muda.
+  const [ordemLocal, setOrdemLocal] = useState<Record<TipoKey, string[]>>({} as Record<TipoKey, string[]>);
+  useEffect(() => {
+    if (!fotos) return;
+    const novo: Record<string, string[]> = {};
+    for (const t of TIPOS) {
+      novo[t.key] = fotos.filter((f) => f.tipo_foto === t.key).map((f) => f.id);
+    }
+    setOrdemLocal(novo as Record<TipoKey, string[]>);
+  }, [fotos]);
 
   // Signed URLs por foto.id
   useEffect(() => {
