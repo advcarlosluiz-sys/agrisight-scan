@@ -74,8 +74,20 @@ function Dashboard() {
     f === "todos"
       ? statusTotais?.length ?? 0
       : (statusTotais ?? []).filter((i) => i.status_processo === f).length;
+  const termo = q.trim().toLowerCase();
+  const matchBusca = (i: any) => {
+    if (!termo) return true;
+    const alvo = [
+      i.canteiro?.nome,
+      i.propriedade?.nome,
+      i.propriedade?.produtor?.nome,
+      i.setor?.codigo,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return alvo.includes(termo);
+  };
+  const inspecoesBusca = (inspecoes ?? []).filter(matchBusca);
   const inspecoesFiltradas =
-    filtro === "todos" ? inspecoes ?? [] : (inspecoes ?? []).filter((i: any) => i.status_processo === filtro);
+    filtro === "todos" ? inspecoesBusca : inspecoesBusca.filter((i: any) => i.status_processo === filtro);
 
   return (
     <AppShell title="Dashboard" back="/">
