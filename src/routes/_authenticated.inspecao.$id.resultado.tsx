@@ -30,6 +30,7 @@ export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
 
 function ResultadoPage() {
   const { id } = useParams({ from: "/_authenticated/inspecao/$id/resultado" });
+  useRedirectIfAnalisando(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [reanalisando, setReanalisando] = useState(false);
