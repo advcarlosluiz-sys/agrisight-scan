@@ -154,25 +154,42 @@ function SyncCard({ offline, pendentes }: { offline: boolean; pendentes: number 
     }
   };
 
+  const temPendentes = pendentes > 0;
+  const destacar = temPendentes; // CTA primário quando há fila
   return (
-    <div className="flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-card">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary">
+    <div
+      className={`flex items-center gap-4 rounded-2xl border p-4 shadow-card ${
+        destacar ? "border-primary/40 bg-primary/5 ring-2 ring-primary/15" : "bg-card"
+      }`}
+    >
+      <div
+        className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+          destacar ? "bg-primary text-primary-foreground" : "bg-primary-soft text-primary"
+        }`}
+      >
         {running ? <Loader2 className="h-6 w-6 animate-spin" /> : <CloudUpload className="h-6 w-6" />}
       </div>
       <div className="flex-1 text-left">
         <div className="font-semibold">Sincronizar Dados</div>
         <div className="text-xs text-muted-foreground">
-          {pendentes === 0
-            ? "Tudo enviado"
-            : `${pendentes} pendente${pendentes > 1 ? "s" : ""} na fila`}
+          {temPendentes
+            ? `${pendentes} pendente${pendentes > 1 ? "s" : ""}${offline ? " · aguardando conexão" : " · pronto pra enviar"}`
+            : "Tudo enviado"}
         </div>
       </div>
       <div className="flex flex-col items-end gap-1">
         <button
           type="button"
           onClick={handleSync}
-          disabled={running || offline || pendentes === 0}
+          disabled={running}
           className="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+          title={
+            offline
+              ? "Sem conexão — toque para verificar"
+              : temPendentes
+                ? "Enviar agora"
+                : "Nada pendente"
+          }
         >
           {running ? "Enviando…" : "Sincronizar"}
         </button>
