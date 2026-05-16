@@ -17,6 +17,16 @@ import {
   Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { StatusProcessoBadge, useStatusProcesso } from "@/components/status-processo-badge";
 
 type FotoStatus = "pendente" | "carregada" | "enviada";
