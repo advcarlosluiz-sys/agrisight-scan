@@ -100,6 +100,7 @@ function AnalisandoPage() {
   const ranRef = useRef(false);
   const executandoRef = useRef(false);
   const canceladoRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
   const statusProcesso = useStatusProcesso(id);
 
   const marcarStatus = (fotoId: string, status: FotoStatus) =>
@@ -202,15 +203,49 @@ function AnalisandoPage() {
 
       type RespIA = { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown };
       let resp: RespIA | null = null;
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
       try {
-        const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
-          body: { inspecao_id: id, mode: "preview" },
+        // Usa fetch direto (em vez de supabase.functions.invoke) para podermos
+        // abortar a conexão e propagar o cancelamento até a Edge Function,
+        // que por sua vez aborta a chamada à IA via req.signal.
+        const { data: sess } = await supabase.auth.getSession();
+        const token = sess.session?.access_token;
+        const supaUrl = import.meta.env.VITE_SUPABASE_URL as string;
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+        const r = await fetch(`${supaUrl}/functions/v1/analisar-inspecao`, {
+          method: "POST",
+          signal: ctrl.signal,
+          headers: {
+            "Content-Type": "application/json",
+            apikey: anonKey,
+            Authorization: `Bearer ${token ?? anonKey}`,
+          },
+          body: JSON.stringify({ inspecao_id: id, mode: "preview" }),
         });
         if (canceladoRef.current) return;
-        if (error) throw error;
-        resp = data as RespIA;
+        const text = await r.text();
+        let parsed: unknown = null;
+        try {
+          parsed = text ? JSON.parse(text) : null;
+        } catch {
+          parsed = { error: text || `HTTP ${r.status}` };
+        }
+        if (!r.ok) {
+          const err = new Error(
+            (parsed as { error?: string })?.error || `HTTP ${r.status}`,
+          ) as Error & { context?: Response };
+          // Reanexa um Response para extrairErroEdge ler status/payload.
+          err.context = new Response(text, {
+            status: r.status,
+            headers: r.headers,
+          });
+          throw err;
+        }
+        resp = parsed as RespIA;
       } finally {
         clearInterval(tickEnvio);
+        abortRef.current = null;
       }
 
       if (resp?.error) throw new Error(resp.error);
@@ -251,6 +286,10 @@ function AnalisandoPage() {
 
   const cancelar = async () => {
     canceladoRef.current = true;
+    // Aborta a requisição em andamento — o fechamento da conexão dispara
+    // req.signal na Edge Function, que cancela a chamada à IA.
+    abortRef.current?.abort();
+    abortRef.current = null;
     try {
       await supabase
         .from("inspecoes")
@@ -259,7 +298,7 @@ function AnalisandoPage() {
     } catch {
       // ignora — segue cancelando localmente
     }
-    toast.info("Análise cancelada");
+    toast.info("Análise cancelada — chamada à IA interrompida");
     navigate({ to: "/inspecao/$id/observacoes", params: { id } });
   };
 
