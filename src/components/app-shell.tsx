@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { Leaf, ArrowLeft, LogOut, Wifi, WifiOff, CloudUpload } from "lucide-react";
+import { Leaf, ArrowLeft, LogOut, Wifi, WifiOff, CloudUpload, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { useOnlineStatus } from "@/lib/use-online";
+import { useConnection } from "@/lib/use-online";
 import { Button } from "@/components/ui/button";
 import { usePendingPhotos, useSyncQueueState } from "@/lib/use-sync-queue";
 
@@ -16,7 +16,8 @@ export function AppShell({
 }) {
   const router = useRouter();
   const { signOut } = useAuth();
-  const online = useOnlineStatus();
+  const { status } = useConnection();
+  const online = status !== "offline";
   const pending = usePendingPhotos();
   const { processing } = useSyncQueueState();
   const totalPendentes = pending.length;
@@ -55,11 +56,25 @@ export function AppShell({
             </Link>
           )}
           <div
-            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${online ? "bg-success/20" : "bg-destructive/30"}`}
-            title={online ? "Online" : "Offline"}
+            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
+              status === "online"
+                ? "bg-success/20"
+                : status === "checking"
+                  ? "bg-white/15"
+                  : "bg-destructive/30"
+            }`}
+            title={status === "checking" ? "Verificando…" : online ? "Online" : "Offline"}
           >
-            {online ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-            <span className="hidden sm:inline">{online ? "Online" : "Offline"}</span>
+            {status === "checking" ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : online ? (
+              <Wifi className="h-3 w-3" />
+            ) : (
+              <WifiOff className="h-3 w-3" />
+            )}
+            <span className="hidden sm:inline">
+              {status === "checking" ? "..." : online ? "Online" : "Offline"}
+            </span>
           </div>
           <Button
             size="icon"
