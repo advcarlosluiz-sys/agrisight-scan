@@ -135,9 +135,9 @@ function ObsPage() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => navigate({ to: "/inspecao/$id", params: { id } })}
+                onClick={() => window.history.back()}
               >
-                <Camera className="mr-1 h-3 w-3" /> Adicionar/ver fotos
+                <Camera className="mr-1 h-3 w-3" /> Voltar e adicionar fotos
               </Button>
               {validacao.acao === "sincronizar" ? (
                 <Button size="sm" variant="outline" onClick={() => navigate({ to: "/sincronizacao" })}>
