@@ -37,6 +37,7 @@ function ObsPage() {
   const [busy, setBusy] = useState(false);
   const lockRef = useRef(false);
   const statusProcesso = useStatusProcesso(id);
+  useRedirectIfAnalisando(id);
   const online = useOnlineStatus();
   const fotosInfo = useInspecaoFotos(id);
   const validacao = fotosInfo.validar(online);
