@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Search, X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { AppShell } from "@/components/app-shell";
@@ -43,19 +43,27 @@ function HistoricoPage() {
   const setQ = (v: string) =>
     navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, q: v }), replace: true });
 
-  const { data } = useQuery({
-    queryKey: ["historico"],
-    queryFn: async () =>
-      (
-        await supabase
+  const PAGE_SIZE = 20;
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["historico"],
+      initialPageParam: 0,
+      queryFn: async ({ pageParam }) => {
+        const from = (pageParam as number) * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
+        const { data } = await supabase
           .from("inspecoes")
           .select(
             "id, data_inspecao, status_geral, status_processo, setor:setor_id(codigo), canteiro:canteiro_id(nome), propriedade:propriedade_id(nome, produtor:produtor_id(nome))",
           )
           .order("created_at", { ascending: false })
-          .limit(50)
-      ).data ?? [],
-  });
+          .range(from, to);
+        return data ?? [];
+      },
+      getNextPageParam: (lastPage, allPages) =>
+        lastPage.length < PAGE_SIZE ? undefined : allPages.length,
+    });
+  const inspecoesAll = (data?.pages ?? []).flat();
 
   const termo = q.trim().toLowerCase();
   const matchBusca = (i: any) => {
@@ -69,7 +77,7 @@ function HistoricoPage() {
     return alvo.includes(termo);
   };
 
-  const baseFiltrada = (data ?? []).filter(matchBusca);
+  const baseFiltrada = inspecoesAll.filter(matchBusca);
   const lista = baseFiltrada.filter((i) =>
     filtro === "todos" ? true : (i as { status_processo?: string }).status_processo === filtro,
   );
@@ -169,6 +177,23 @@ function HistoricoPage() {
             </Link>
           );
         })}
+      </div>
+
+      <div className="mt-4 flex justify-center">
+        {hasNextPage ? (
+          <button
+            type="button"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-card active:scale-[0.98] disabled:opacity-60"
+          >
+            {isFetchingNextPage ? "Carregando…" : "Carregar mais"}
+          </button>
+        ) : (
+          !isLoading && inspecoesAll.length > 0 && (
+            <p className="text-xs text-muted-foreground">Fim da lista</p>
+          )
+        )}
       </div>
     </AppShell>
   );
