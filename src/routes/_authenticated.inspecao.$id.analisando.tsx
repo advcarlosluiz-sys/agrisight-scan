@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { StatusProcessoBadge, useStatusProcesso } from "@/components/status-processo-badge";
+import { StatusProcessoBadge, useStatusProcesso, useSyncStatusRoute } from "@/components/status-processo-badge";
 
 type FotoStatus = "pendente" | "carregada" | "enviada";
 type FotoItem = { id: string; legenda: string | null; url: string | null; status: FotoStatus };
