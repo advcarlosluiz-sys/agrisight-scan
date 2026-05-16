@@ -80,7 +80,28 @@ function HistoricoPage() {
 
   return (
     <AppShell title="Histórico" back="/">
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            inputMode="search"
+            placeholder="Buscar por produtor, propriedade ou canteiro"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="h-10 w-full rounded-full border border-border bg-card pl-9 pr-9 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={() => setQ("")}
+              aria-label="Limpar busca"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
         <CopyFilterLinkButton />
       </div>
       <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
