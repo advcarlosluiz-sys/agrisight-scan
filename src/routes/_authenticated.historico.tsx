@@ -8,6 +8,7 @@ import { CopyFilterLinkButton } from "@/components/copy-filter-link-button";
 import { StatusPill } from "@/components/status-pill";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
 import { supabase } from "@/integrations/supabase/client";
+import { FiltroStatusIndicador } from "@/components/filtro-status-indicador";
 import { usePersistedFilter } from "@/hooks/use-persisted-filter";
 import { cn } from "@/lib/utils";
 
@@ -89,6 +90,7 @@ function HistoricoPage() {
 
   return (
     <AppShell title="Histórico" back="/">
+      <FiltroStatusIndicador filtro={filtro} onClear={() => setFiltro("todos")} />
       <div className="mb-3 flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
