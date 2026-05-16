@@ -5,8 +5,12 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Sparkles, Loader2, AlertTriangle } from "lucide-react";
+import { Sparkles, Loader2, AlertTriangle, Check, Upload, ImageIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { StatusProcessoBadge, useStatusProcesso } from "@/components/status-processo-badge";
+
+type FotoStatus = "pendente" | "carregada" | "enviada";
+type FotoItem = { id: string; legenda: string | null; url: string | null; status: FotoStatus };
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/analisando")({
   component: AnalisandoPage,
