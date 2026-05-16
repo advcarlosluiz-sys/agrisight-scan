@@ -32,14 +32,39 @@ function HomePage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("inspecoes")
-        .select("id, data_inspecao, setor:setor_id(codigo)")
+        .select("id, data_inspecao, setor_id, status_processo, status_geral, setor:setor_id(codigo)")
         .is("status_geral", null)
+        .neq("status_processo", "cancelada")
         .order("created_at", { ascending: false })
         .limit(1);
       return data?.[0] ?? null;
     },
     enabled: !offline,
   });
+
+  // Restaura o passo correto da inspeção pendente
+  const continuar = (() => {
+    if (!pendente) return null;
+    const p = pendente as {
+      id: string;
+      setor_id: string | null;
+      status_processo: string | null;
+    };
+    if (p.status_processo === "analisando") {
+      return { to: "/inspecao/$id/analisando" as const, params: { id: p.id }, etapa: "Análise em andamento" };
+    }
+    if (p.status_processo === "concluida") {
+      return { to: "/inspecao/$id/resultado" as const, params: { id: p.id }, etapa: "Ver resultado" };
+    }
+    if (!p.setor_id) {
+      return { to: "/inspecao/$id/qr" as const, params: { id: p.id }, etapa: "Escanear setor" };
+    }
+    return {
+      to: "/inspecao/$id/setor/$sid" as const,
+      params: { id: p.id, sid: p.setor_id },
+      etapa: "Coleta de fotos",
+    };
+  })();
 
   const items = [
     {
@@ -52,12 +77,14 @@ function HomePage() {
       disabled: false,
     },
     {
-      to: pendente ? "/inspecao/$id/observacoes" : "/historico",
-      params: pendente ? { id: pendente.id } : undefined,
+      to: continuar?.to ?? "/historico",
+      params: continuar?.params,
       icon: ClipboardList,
       label: "Continuar Inspeção",
-      disabled: !pendente,
-      sub: pendente ? `Setor ${(pendente as any).setor?.codigo ?? "—"}` : "Nenhuma pendente",
+      disabled: !continuar,
+      sub: continuar
+        ? `Setor ${(pendente as any)?.setor?.codigo ?? "—"} · ${continuar.etapa}`
+        : "Nenhuma pendente",
     },
     {
       to: "/historico",
