@@ -128,14 +128,15 @@ function AnalisandoPage() {
           idx += 1;
         }, passo);
 
-        let resp: { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown } | null = null;
+        type RespIA = { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown };
+        let resp: RespIA | null = null;
         try {
           const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
             body: { inspecao_id: id, mode: "preview" },
           });
           if (canceladoRef.current) return;
           if (error) throw error;
-          resp = data as typeof resp;
+          resp = data as RespIA;
         } finally {
           clearInterval(tickEnvio);
         }
