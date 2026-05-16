@@ -58,7 +58,7 @@ function Dashboard() {
   const setOrdem = (o: Ordem) =>
     navigate({ search: (prev: DashSearch) => ({ ...prev, ordem: o }), replace: true });
   const PAGE_SIZE = 10;
-  const ordemCfg = ORDEM_CONFIG[ordem];
+  const ordemCfg = ORDEM_CONFIG[ordem as Ordem];
   const {
     data: inspecoesPages,
     fetchNextPage,
