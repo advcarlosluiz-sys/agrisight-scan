@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
+import { AcoesPorStatus } from "@/components/acoes-por-status";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/inspecao/nova")({
