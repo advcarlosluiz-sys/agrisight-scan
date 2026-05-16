@@ -55,7 +55,12 @@ export function subscribePreferences(l: Listener) {
 
 export function usePreferences() {
   const [prefs, setPrefs] = useState<AppPreferences>(current);
-  useEffect(() => subscribePreferences(setPrefs), []);
+  useEffect(() => {
+    const unsub = subscribePreferences(setPrefs);
+    return () => {
+      unsub();
+    };
+  }, []);
   return prefs;
 }
 
