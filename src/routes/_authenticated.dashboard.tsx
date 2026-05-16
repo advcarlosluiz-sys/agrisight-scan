@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Search, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
@@ -18,6 +19,7 @@ const dashboardSearchSchema = z.object({
     z.enum(["todos", "em_andamento", "analisando", "concluida", "cancelada"]),
     "todos",
   ).default("todos"),
+  q: fallback(z.string(), "").default(""),
 });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -33,15 +35,17 @@ const FILTROS: { id: Filtro; label: string }[] = [
 ];
 
 function Dashboard() {
-  const { filtro } = Route.useSearch();
+  const { filtro, q } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
   usePersistedFilter("dashboard:filtro", filtro, "todos", "/dashboard");
   const setFiltro = (f: Filtro) =>
-    navigate({ search: { filtro: f }, replace: true });
+    navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, filtro: f }), replace: true });
+  const setQ = (v: string) =>
+    navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, q: v }), replace: true });
   const { data: inspecoes } = useQuery({
     queryKey: ["dash-inspecoes"],
     queryFn: async () =>
-      (await supabase.from("inspecoes").select("id, status_geral, status_processo, data_inspecao, setor:setor_id(codigo)").order("created_at", { ascending: false }).limit(20)).data ?? [],
+      (await supabase.from("inspecoes").select("id, status_geral, status_processo, data_inspecao, setor:setor_id(codigo), canteiro:canteiro_id(nome), propriedade:propriedade_id(nome, produtor:produtor_id(nome))").order("created_at", { ascending: false }).limit(20)).data ?? [],
   });
   // Contagem agregada por status_processo considerando TODAS as inspeções
   // da organização (RLS já restringe), não apenas as últimas 20.
@@ -71,16 +75,51 @@ function Dashboard() {
     f === "todos"
       ? statusTotais?.length ?? 0
       : (statusTotais ?? []).filter((i) => i.status_processo === f).length;
+  const termo = q.trim().toLowerCase();
+  const matchBusca = (i: any) => {
+    if (!termo) return true;
+    const alvo = [
+      i.canteiro?.nome,
+      i.propriedade?.nome,
+      i.propriedade?.produtor?.nome,
+      i.setor?.codigo,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return alvo.includes(termo);
+  };
+  const inspecoesBusca = (inspecoes ?? []).filter(matchBusca);
   const inspecoesFiltradas =
-    filtro === "todos" ? inspecoes ?? [] : (inspecoes ?? []).filter((i: any) => i.status_processo === filtro);
+    filtro === "todos" ? inspecoesBusca : inspecoesBusca.filter((i: any) => i.status_processo === filtro);
 
   return (
     <AppShell title="Dashboard" back="/">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-3 flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            inputMode="search"
+            placeholder="Buscar por produtor, propriedade ou canteiro"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="h-10 w-full rounded-full border border-border bg-card pl-9 pr-9 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={() => setQ("")}
+              aria-label="Limpar busca"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <CopyFilterLinkButton />
+      </div>
+      <div className="mb-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Status do processo
         </h3>
-        <CopyFilterLinkButton />
       </div>
       <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
         <KpiProc label="Todos" value={cntProc("todos")} ativo={filtro === "todos"} onClick={() => setFiltro("todos")} tone="neutral" />
