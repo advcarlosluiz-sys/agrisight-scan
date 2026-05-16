@@ -152,9 +152,70 @@ function ResultadoPage() {
         )}
       </Section>
 
+      <Section icon={ListChecks} title="Tarefas recomendadas">
+        {tarefasLoading ? (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-12 animate-pulse rounded-lg bg-muted/40" />
+            ))}
+          </div>
+        ) : !tarefas || tarefas.length === 0 ? (
+          <Empty>Nenhuma tarefa gerada para esta inspeção.</Empty>
+        ) : (
+          <div className="space-y-2">
+            {tarefas.map((t) => {
+              const concluida = t.status === "concluida";
+              return (
+                <label
+                  key={t.id}
+                  className="flex items-start gap-3 rounded-lg border bg-background/60 p-3 active:bg-muted"
+                >
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={concluida}
+                    disabled={toggleTarefa.isPending}
+                    onCheckedChange={(v) => toggleTarefa.mutate({ id: t.id, concluida: !!v })}
+                  />
+                  <div className="flex-1 space-y-1">
+                    <p className={`text-sm font-medium ${concluida ? "text-muted-foreground line-through" : ""}`}>
+                      {t.titulo}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-medium ${
+                          t.prioridade === "alta"
+                            ? "bg-destructive/15 text-destructive"
+                            : t.prioridade === "media"
+                            ? "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {t.prioridade}
+                      </span>
+                      {t.prazo ? (
+                        <span className="text-muted-foreground">
+                          prazo: {new Date(t.prazo).toLocaleDateString("pt-BR")}
+                        </span>
+                      ) : null}
+                    </div>
+                    {t.descricao ? (
+                      <p className="text-xs text-muted-foreground">{t.descricao}</p>
+                    ) : null}
+                  </div>
+                </label>
+              );
+            })}
+            <p className="pt-1 text-xs text-muted-foreground">
+              {tarefas.filter((t) => t.status === "concluida").length} de {tarefas.length} concluídas
+            </p>
+          </div>
+        )}
+      </Section>
+
       <Section icon={UserCheck} title="Necessidade de agrônomo">
         <p className="text-sm font-medium">{a.necessidade_agronomo ? "Sim — recomendamos visita técnica" : "Não — manejo padrão"}</p>
       </Section>
+
 
       {a.justificativa && (
         <div className="mt-4 rounded-2xl border bg-muted/40 p-4 text-sm text-muted-foreground">
