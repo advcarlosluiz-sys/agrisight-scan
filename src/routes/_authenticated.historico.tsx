@@ -37,7 +37,7 @@ const FILTROS: { id: Filtro; label: string }[] = [
 function HistoricoPage() {
   const { filtro, q } = Route.useSearch();
   const navigate = useNavigate({ from: "/historico" });
-  usePersistedFilter("historico:filtro", filtro, "todos", "/historico");
+  usePersistedFilter("status-processo:filtro", filtro, "todos", "/historico");
   const setFiltro = (f: Filtro) =>
     navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, filtro: f }), replace: true });
   const setQ = (v: string) =>
