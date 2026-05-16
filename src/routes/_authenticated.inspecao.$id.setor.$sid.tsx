@@ -489,48 +489,43 @@ function ColetaPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-2">
-                {lista.map((f) => {
-                  const url = previews[f.id];
-                  return (
-                    <div
-                      key={f.id}
-                      className="relative aspect-square overflow-hidden rounded-xl border bg-muted"
-                    >
-                      {url ? (
-                        <img
-                          src={url}
-                          alt={`Foto ${t.label}`}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        </div>
-                      )}
+              {lista.length > 1 && (
+                <p className="mb-1 text-[10px] text-muted-foreground">
+                  Arraste pelas alças para reordenar — a ordem é usada no envio à IA.
+                </p>
+              )}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(e) => void handleDragEnd(t.key, e)}
+              >
+                <SortableContext items={lista.map((f) => f.id)} strategy={rectSortingStrategy}>
+                  <div className="grid grid-cols-3 gap-2">
+                    {lista.map((f, idx) => (
+                      <SortablePhoto
+                        key={f.id}
+                        foto={f}
+                        url={previews[f.id]}
+                        label={t.label}
+                        posicao={idx + 1}
+                        canDrag={lista.length > 1}
+                        onRemove={() => remover(f)}
+                      />
+                    ))}
+
+                    {!noLimite && (
                       <button
                         type="button"
-                        onClick={() => remover(f)}
-                        aria-label="Remover foto"
-                        className="absolute right-1 top-1 rounded-full bg-destructive/90 p-1 text-destructive-foreground shadow-sm hover:bg-destructive"
+                        onClick={() => triggerInput(t.key)}
+                        className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Plus className="h-5 w-5" />
+                        <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
                       </button>
-                    </div>
-                  );
-                })}
-
-                {!noLimite && (
-                  <button
-                    type="button"
-                    onClick={() => triggerInput(t.key)}
-                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
-                  >
-                    <Plus className="h-5 w-5" />
-                    <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
-                  </button>
-                )}
-              </div>
+                    )}
+                  </div>
+                </SortableContext>
+              </DndContext>
 
               <input
                 ref={(el) => {
