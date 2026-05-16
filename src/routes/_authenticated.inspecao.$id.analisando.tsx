@@ -1,16 +1,70 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Sparkles, Loader2, AlertTriangle, Check, Upload, ImageIcon } from "lucide-react";
+import {
+  Sparkles,
+  Loader2,
+  AlertTriangle,
+  Check,
+  Upload,
+  ImageIcon,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusProcessoBadge, useStatusProcesso } from "@/components/status-processo-badge";
 
 type FotoStatus = "pendente" | "carregada" | "enviada";
 type FotoItem = { id: string; legenda: string | null; url: string | null; status: FotoStatus };
+
+type ErroDetalhado = {
+  mensagem: string;
+  status?: number;
+  codigo?: string;
+  contexto?: string;
+  bruto?: string;
+};
+
+async function extrairErroEdge(e: unknown): Promise<ErroDetalhado> {
+  const base: ErroDetalhado = {
+    mensagem: e instanceof Error ? e.message : "Erro desconhecido na análise",
+  };
+  // supabase.functions.invoke retorna FunctionsHttpError com `context: Response`
+  const ctx = (e as { context?: Response } | null)?.context;
+  if (ctx && typeof ctx === "object" && "status" in ctx) {
+    base.status = ctx.status;
+    try {
+      const texto = await ctx.clone().text();
+      base.bruto = texto;
+      try {
+        const json = JSON.parse(texto) as {
+          error?: string;
+          message?: string;
+          code?: string;
+          details?: unknown;
+        };
+        base.mensagem = json.error || json.message || base.mensagem;
+        base.codigo = json.code;
+        if (json.details) {
+          base.contexto =
+            typeof json.details === "string"
+              ? json.details
+              : JSON.stringify(json.details, null, 2);
+        }
+      } catch {
+        // resposta não-JSON — mantém texto bruto
+      }
+    } catch {
+      // ignora falha de leitura do corpo
+    }
+  }
+  return base;
+}
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/analisando")({
   component: AnalisandoPage,
