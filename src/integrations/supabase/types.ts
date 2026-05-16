@@ -414,6 +414,7 @@ export type Database = {
       perfis: {
         Row: {
           created_at: string
+          filtro_status_preferido: string
           id: string
           nome: string
           organizacao_id: string
@@ -422,6 +423,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          filtro_status_preferido?: string
           id: string
           nome: string
           organizacao_id: string
@@ -430,6 +432,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          filtro_status_preferido?: string
           id?: string
           nome?: string
           organizacao_id?: string
