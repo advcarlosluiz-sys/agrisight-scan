@@ -87,8 +87,11 @@ function Dashboard() {
   const { data: tarefas } = useQuery({
     queryKey: ["dash-tarefas"],
     queryFn: async () =>
-      (await supabase.from("tarefas_recomendadas").select("id, titulo, prioridade, status").eq("status", "pendente").limit(5)).data ?? [],
+      (await supabase.from("tarefas_recomendadas").select("id, titulo, prioridade, status, inspecao_id, inspecao:inspecao_id(status_processo)").eq("status", "pendente")).data ?? [],
   });
+  const tarefasFiltradas = (tarefas ?? []).filter((t: any) =>
+    filtro === "todos" ? true : t.inspecao?.status_processo === filtro,
+  ).slice(0, 5);
 
   const total = inspecoes?.length ?? 0;
   const cnt = (s: string) => inspecoes?.filter((i: any) => i.status_geral === s).length ?? 0;
