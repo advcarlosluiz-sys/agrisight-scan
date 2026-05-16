@@ -24,6 +24,18 @@ type Tarefa = {
 
 const PRIO_ORDER: Record<string, number> = { alta: 0, media: 1, baixa: 2 };
 
+type TipoFoto = "geral" | "plantas" | "folhas" | "frutos" | "solo" | "plastico";
+const TIPOS_FOTO: { key: TipoFoto; label: string }[] = [
+  { key: "geral", label: "Geral" },
+  { key: "plantas", label: "Plantas" },
+  { key: "folhas", label: "Folhas" },
+  { key: "frutos", label: "Frutos" },
+  { key: "solo", label: "Solo" },
+  { key: "plastico", label: "Plástico/Túnel" },
+];
+const FOTOS_RECOMENDADO = 3;
+const TIPOS_RECOMENDADO = 2;
+
 export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
   component: ResultadoPage,
 });
