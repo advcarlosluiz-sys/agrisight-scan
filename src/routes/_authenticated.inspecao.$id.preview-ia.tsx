@@ -166,9 +166,26 @@ function PreviewIA() {
       {payload.degradado && (
         <div className="mb-3 flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs">
           <AlertTriangle className="mt-0.5 h-4 w-4 text-warning" />
-          <div>
-            <p className="font-medium">Análise gerada por fallback</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">
+              Análise gerada por fallback
+              {payload.degradado_codigo && (
+                <span className="ml-2 rounded-full bg-warning/20 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide">
+                  {payload.degradado_codigo}
+                </span>
+              )}
+            </p>
             <p className="text-muted-foreground">Motivo: {payload.degradado}. Revise com cuidado.</p>
+            {payload.degradado_detalhe && (
+              <details className="mt-1">
+                <summary className="cursor-pointer text-[11px] text-muted-foreground hover:text-foreground">
+                  Detalhes técnicos
+                </summary>
+                <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words rounded bg-muted/60 p-2 text-[10px] leading-snug">
+{payload.degradado_detalhe}
+                </pre>
+              </details>
+            )}
           </div>
         </div>
       )}
