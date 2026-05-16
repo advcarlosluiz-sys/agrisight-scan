@@ -136,6 +136,14 @@ function ObsPage() {
                 })}
                 . Revise as observações e inicie novamente quando quiser.
               </p>
+              {motivoCancelamento ? (
+                <div className="mt-1 rounded-md border border-destructive/30 bg-background/60 p-2">
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Motivo informado
+                  </div>
+                  <p className="whitespace-pre-wrap text-xs text-foreground">{motivoCancelamento}</p>
+                </div>
+              ) : null}
               <div className="pt-1">
                 <Button size="sm" variant="ghost" onClick={dispensarAviso}>
                   Dispensar
