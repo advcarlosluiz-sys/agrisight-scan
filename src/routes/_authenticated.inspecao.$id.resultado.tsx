@@ -166,8 +166,15 @@ function ResultadoPage() {
           </p>
         )}
         {(() => {
-          const rc = (a.resposta_completa ?? {}) as { _degradado?: string | null; _fotos_falhadas?: number };
+          const rc = (a.resposta_completa ?? {}) as {
+            _degradado?: string | null;
+            _degradado_codigo?: string | null;
+            _degradado_detalhe?: string | null;
+            _fotos_falhadas?: number;
+          };
           const degradado = rc._degradado ?? null;
+          const degradadoCodigo = rc._degradado_codigo ?? null;
+          const degradadoDetalhe = rc._degradado_detalhe ?? null;
           const falhadas = typeof rc._fotos_falhadas === "number" ? rc._fotos_falhadas : 0;
           const total = totalFotos ?? 0;
           const usadas = Math.max(0, total - falhadas);
@@ -180,9 +187,26 @@ function ResultadoPage() {
                   className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-[12px] text-amber-900 dark:text-amber-200"
                 >
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                  <div>
-                    <p className="font-medium">Análise gerada com fallback</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">
+                      Análise gerada com fallback
+                      {degradadoCodigo && (
+                        <span className="ml-2 rounded-full bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide">
+                          {degradadoCodigo}
+                        </span>
+                      )}
+                    </p>
                     <p className="opacity-80">Motivo: {degradado}. Recomenda-se reanalisar.</p>
+                    {degradadoDetalhe && (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-[11px] opacity-70 hover:opacity-100">
+                          Detalhes técnicos
+                        </summary>
+                        <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-words rounded bg-amber-500/10 p-2 text-[10px] leading-snug">
+{degradadoDetalhe}
+                        </pre>
+                      </details>
+                    )}
                   </div>
                 </div>
               )}
