@@ -75,6 +75,7 @@ function ObsPage() {
       // ignora
     }
     setCanceladaEm(null);
+    setMotivoCancelamento("");
   };
 
   const analisar = async () => {
