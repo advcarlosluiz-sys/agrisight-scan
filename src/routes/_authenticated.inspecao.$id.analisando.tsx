@@ -82,6 +82,20 @@ export const Route = createFileRoute("/_authenticated/inspecao/$id/analisando")(
   component: AnalisandoPage,
 });
 
+// Backoff exponencial com jitter para reprocessamento de falhas transitórias.
+// n=1 → ~2s, n=2 → ~5s, n=3 → ~10s. Aborta cedo se o usuário cancelar.
+async function aguardarBackoff(n: number, canceladoRef: React.RefObject<boolean>) {
+  const baseMs = Math.min(10_000, 1_000 * Math.pow(2, n));
+  const jitter = Math.round(Math.random() * 500);
+  const total = baseMs + jitter;
+  const passo = 200;
+  const fim = Date.now() + total;
+  while (Date.now() < fim) {
+    if (canceladoRef.current) return;
+    await new Promise((r) => setTimeout(r, passo));
+  }
+}
+
 const ETAPAS = [
   "Carregando dados da inspeção...",
   "Buscando fotos no armazenamento...",
