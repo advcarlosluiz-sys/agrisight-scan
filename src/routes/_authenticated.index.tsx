@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   ClipboardList,
@@ -24,9 +24,28 @@ export const Route = createFileRoute("/_authenticated/")({
 });
 
 function HomePage() {
+  const navigate = useNavigate();
   const pendentesFila = usePendingPhotos();
   const { status } = useConnection();
   const offline = status === "offline";
+
+  // Detecta usuário novo (sem propriedades) e leva ao onboarding
+  const { data: precisaOnboarding } = useQuery({
+    queryKey: ["precisa-onboarding"],
+    enabled: !offline,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("propriedades")
+        .select("id", { count: "exact", head: true });
+      return (count ?? 0) === 0;
+    },
+  });
+  useEffect(() => {
+    if (precisaOnboarding && sessionStorage.getItem("onboarding:done") !== "1") {
+      navigate({ to: "/onboarding", replace: true });
+    }
+  }, [precisaOnboarding, navigate]);
+
   const { data: pendente } = useQuery({
     queryKey: ["pendente"],
     queryFn: async () => {
