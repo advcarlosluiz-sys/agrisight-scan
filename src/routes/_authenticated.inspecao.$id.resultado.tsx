@@ -148,6 +148,37 @@ function ResultadoPage() {
             {a.created_at ? ` · ${new Date(a.created_at).toLocaleString("pt-BR")}` : ""}
           </p>
         )}
+        {(() => {
+          const rc = (a.resposta_completa ?? {}) as { _degradado?: string | null; _fotos_falhadas?: number };
+          const degradado = rc._degradado ?? null;
+          const falhadas = typeof rc._fotos_falhadas === "number" ? rc._fotos_falhadas : 0;
+          const total = totalFotos ?? 0;
+          const usadas = Math.max(0, total - falhadas);
+          return (
+            <>
+              {degradado && (
+                <div
+                  role="status"
+                  className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-[12px] text-amber-900 dark:text-amber-200"
+                >
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <div>
+                    <p className="font-medium">Análise gerada com fallback</p>
+                    <p className="opacity-80">Motivo: {degradado}. Recomenda-se reanalisar.</p>
+                  </div>
+                </div>
+              )}
+              {total > 0 && (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Fotos analisadas: <span className="font-medium text-foreground">{usadas} de {total}</span>
+                  {falhadas > 0 && (
+                    <span className="text-destructive"> · {falhadas} {falhadas === 1 ? "falhou" : "falharam"}</span>
+                  )}
+                </p>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       <Section icon={AlertTriangle} title="Problemas detectados">
