@@ -5,13 +5,27 @@ const MAX_ATTEMPTS = 8;
 // backoff em ms — 5s, 15s, 60s, 5min, 15min, 30min, 1h, 2h
 const BACKOFFS = [5_000, 15_000, 60_000, 5 * 60_000, 15 * 60_000, 30 * 60_000, 60 * 60_000, 120 * 60_000];
 
-type Listener = (state: { processing: boolean }) => void;
+type Listener = (state: { processing: boolean; cancelling: boolean }) => void;
 const listeners = new Set<Listener>();
 let processing = false;
+let cancelRequested = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
+let pauseUntil = 0; // após cancelar, segura auto-retry por alguns segundos
 
 function emit() {
-  for (const l of listeners) l({ processing });
+  for (const l of listeners) l({ processing, cancelling: cancelRequested });
+}
+
+export function cancelSync() {
+  if (!processing) return false;
+  cancelRequested = true;
+  pauseUntil = Date.now() + 10_000; // 10s sem auto-retry
+  emit();
+  return true;
+}
+
+export function isCancelling() {
+  return cancelRequested;
 }
 
 export function subscribeSyncQueue(l: Listener) {
