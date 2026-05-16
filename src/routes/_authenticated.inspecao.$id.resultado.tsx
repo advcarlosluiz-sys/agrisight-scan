@@ -1,12 +1,24 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { StatusPill } from "@/components/status-pill";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertTriangle, FileText, RefreshCw, Sparkles, UserCheck } from "lucide-react";
+import { AlertTriangle, FileText, ListChecks, RefreshCw, Sparkles, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+
+type Tarefa = {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  prioridade: "alta" | "media" | "baixa";
+  status: "pendente" | "em_andamento" | "concluida" | "cancelada";
+  prazo: string | null;
+};
+
+const PRIO_ORDER: Record<string, number> = { alta: 0, media: 1, baixa: 2 };
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
   component: ResultadoPage,
@@ -15,6 +27,7 @@ export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
 function ResultadoPage() {
   const { id } = useParams({ from: "/_authenticated/inspecao/$id/resultado" });
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [reanalisando, setReanalisando] = useState(false);
 
   const reanalisar = async () => {
