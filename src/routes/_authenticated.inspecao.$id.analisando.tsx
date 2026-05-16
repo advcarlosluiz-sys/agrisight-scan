@@ -207,7 +207,14 @@ function AnalisandoPage() {
         idx += 1;
       }, passo);
 
-      type RespIA = { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown };
+      type RespIA = {
+        error?: string;
+        preview?: unknown;
+        degradado?: string | null;
+        degradado_codigo?: string | null;
+        degradado_detalhe?: string | null;
+        fotos?: unknown;
+      };
       let resp: RespIA | null = null;
       const ctrl = new AbortController();
       abortRef.current = ctrl;
