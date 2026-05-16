@@ -17,7 +17,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
 const AI_TIMEOUT_MS = 55_000;
-const MODELO_IA = "openai/gpt-5-mini";
+// Modelo da IA configurável via secret AI_MODEL (fallback seguro caso ausente).
+// Permite trocar de modelo sem alterar código — basta atualizar o secret e reimplantar.
+const MODELO_IA = (Deno.env.get("AI_MODEL") ?? "").trim() || "openai/gpt-5-mini";
 // Incrementar a cada mudança significativa nos prompts (system/user) abaixo.
 const PROMPT_VERSAO = "v1.1.0";
 
