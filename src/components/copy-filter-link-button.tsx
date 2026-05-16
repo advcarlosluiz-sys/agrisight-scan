@@ -56,9 +56,21 @@ export function CopyFilterLinkButton({ className }: { className?: string }) {
     const markCopied = () => {
       setCopied(true);
       toast.success("Link copiado para a área de transferência", {
-        description: url,
-        duration: FEEDBACK_MS,
         id: "copy-filter-link",
+        duration: TOAST_MS,
+        description: (
+          <span
+            className="mt-1 block break-all rounded-md bg-muted px-2 py-1 font-mono text-[11px] leading-snug text-foreground"
+            title={url}
+          >
+            {url}
+          </span>
+        ),
+        action: {
+          label: "Abrir",
+          onClick: () => window.open(url, "_blank", "noopener,noreferrer"),
+        },
+        closeButton: true,
       });
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
