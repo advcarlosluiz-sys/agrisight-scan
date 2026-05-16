@@ -447,14 +447,16 @@ function ColetaPage() {
                   );
                 })}
 
-                <button
-                  type="button"
-                  onClick={() => triggerInput(t.key)}
-                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
-                >
-                  <Plus className="h-5 w-5" />
-                  <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
-                </button>
+                {!noLimite && (
+                  <button
+                    type="button"
+                    onClick={() => triggerInput(t.key)}
+                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
+                  </button>
+                )}
               </div>
 
               <input
@@ -468,8 +470,22 @@ function ColetaPage() {
                 className="hidden"
                 onChange={(e) => {
                   const files = Array.from(e.target.files ?? []);
-                  files.forEach((f) => upload(t.key, f));
                   e.target.value = "";
+                  const disponivel = restantePorTipo(t.key);
+                  if (disponivel <= 0) {
+                    toast.warning(
+                      `Limite de ${MAX_POR_TIPO} fotos atingido para "${t.label}". Remova alguma para adicionar novas.`,
+                    );
+                    return;
+                  }
+                  const aceitas = files.slice(0, disponivel);
+                  const recusadas = files.length - aceitas.length;
+                  if (recusadas > 0) {
+                    toast.warning(
+                      `Só restavam ${disponivel} vaga${disponivel === 1 ? "" : "s"} em "${t.label}" — ${recusadas} foto${recusadas === 1 ? " foi ignorada" : "s foram ignoradas"}.`,
+                    );
+                  }
+                  aceitas.forEach((f) => upload(t.key, f));
                 }}
               />
             </div>
