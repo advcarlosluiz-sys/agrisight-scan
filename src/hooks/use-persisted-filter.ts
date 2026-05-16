@@ -22,7 +22,11 @@ export function usePersistedFilter<T extends string>(
     if (current === defaultValue) {
       const saved = sessionStorage.getItem(storageKey) as T | null;
       if (saved && saved !== defaultValue) {
-        navigate({ search: { filtro: saved } as never, replace: true });
+        navigate({
+          // Preserva outros search params (q, ordem, etc) e só ajusta o filtro
+          search: (prev: Record<string, unknown>) => ({ ...prev, filtro: saved }),
+          replace: true,
+        });
         return;
       }
     }
