@@ -363,7 +363,11 @@ function AnalisandoPage() {
               </div>
             )}
 
-            <Button variant="outline" onClick={cancelar} className="mt-2 w-full max-w-sm">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmarCancelar(true)}
+              className="mt-2 w-full max-w-sm"
+            >
               Cancelar análise
             </Button>
           </>
