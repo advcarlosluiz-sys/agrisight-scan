@@ -35,12 +35,34 @@ function ObsPage() {
   const [nota, setNota] = useState("");
   const [outros, setOutros] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [canceladaEm, setCanceladaEm] = useState<Date | null>(null);
   const lockRef = useRef(false);
   const statusProcesso = useStatusProcesso(id);
   useRedirectIfAnalisando(id);
   const online = useOnlineStatus();
   const fotosInfo = useInspecaoFotos(id);
   const validacao = fotosInfo.validar(online);
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(`analise-cancelada:${id}`);
+      if (v) {
+        const d = new Date(v);
+        if (!Number.isNaN(d.getTime())) setCanceladaEm(d);
+      }
+    } catch {
+      // ignora
+    }
+  }, [id]);
+
+  const dispensarAviso = () => {
+    try {
+      localStorage.removeItem(`analise-cancelada:${id}`);
+    } catch {
+      // ignora
+    }
+    setCanceladaEm(null);
+  };
 
   const analisar = async () => {
     if (lockRef.current || busy) return;
