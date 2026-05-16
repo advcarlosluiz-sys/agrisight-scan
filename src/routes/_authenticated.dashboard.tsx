@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { CopyFilterLinkButton } from "@/components/copy-filter-link-button";
 import { StatusPill, STATUS_DOT } from "@/components/status-pill";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
+import { AcoesPorStatus } from "@/components/acoes-por-status";
 import { supabase } from "@/integrations/supabase/client";
 import { usePersistedFilter } from "@/hooks/use-persisted-filter";
 import { cn } from "@/lib/utils";
@@ -124,15 +125,20 @@ function Dashboard() {
           <p className="text-sm text-muted-foreground">Nenhuma inspeção neste filtro.</p>
         )}
         {inspecoesFiltradas.slice(0, 5).map((i: any) => (
-          <Link key={i.id} to="/inspecao/$id/resultado" params={{ id: i.id }} className="flex items-center justify-between gap-2 rounded-xl border bg-card p-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm">Setor {i.setor?.codigo ?? "—"} · {new Date(i.data_inspecao).toLocaleDateString("pt-BR")}</p>
-              <div className="mt-1">
-                <StatusProcessoBadge status={i.status_processo} />
+          <div key={i.id} className="rounded-xl border bg-card p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm">Setor {i.setor?.codigo ?? "—"} · {new Date(i.data_inspecao).toLocaleDateString("pt-BR")}</p>
+                <div className="mt-1">
+                  <StatusProcessoBadge status={i.status_processo} />
+                </div>
               </div>
+              <StatusPill status={i.status_geral} />
             </div>
-            <StatusPill status={i.status_geral} />
-          </Link>
+            <div className="mt-2 flex justify-end">
+              <AcoesPorStatus status={i.status_processo} inspecaoId={i.id} />
+            </div>
+          </div>
         ))}
       </div>
 

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
+import { AcoesPorStatus } from "@/components/acoes-por-status";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/inspecao/nova")({
@@ -147,30 +148,23 @@ function NovaInspecao() {
         </div>
         {recentes && recentes.length > 0 ? (
           <div className="space-y-2">
-            {recentes.map((r) => {
-              const destino =
-                r.status_processo === "analisando"
-                  ? ("/inspecao/$id/analisando" as const)
-                  : r.status_processo === "concluida"
-                  ? ("/inspecao/$id/resultado" as const)
-                  : ("/inspecao/$id/observacoes" as const);
-              return (
-                <Link
-                  key={r.id}
-                  to={destino}
-                  params={{ id: r.id }}
-                  className="flex items-center justify-between gap-2 rounded-xl border bg-card p-3 transition active:scale-[0.99]"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm">
-                      Setor {r.setor?.codigo ?? "—"} ·{" "}
-                      {new Date(r.data_inspecao).toLocaleDateString("pt-BR")}
-                    </p>
-                  </div>
+            {recentes.map((r) => (
+              <div
+                key={r.id}
+                className="rounded-xl border bg-card p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="min-w-0 truncate text-sm">
+                    Setor {r.setor?.codigo ?? "—"} ·{" "}
+                    {new Date(r.data_inspecao).toLocaleDateString("pt-BR")}
+                  </p>
                   <StatusProcessoBadge status={r.status_processo} />
-                </Link>
-              );
-            })}
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <AcoesPorStatus status={r.status_processo} inspecaoId={r.id} />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">Ainda não há inspeções recentes.</p>
