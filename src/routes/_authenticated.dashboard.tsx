@@ -12,6 +12,7 @@ import { AcoesPorStatus } from "@/components/acoes-por-status";
 import { FiltroStatusIndicador } from "@/components/filtro-status-indicador";
 import { supabase } from "@/integrations/supabase/client";
 import { usePersistedFilter } from "@/hooks/use-persisted-filter";
+import { useInvalidFiltroToast } from "@/hooks/use-invalid-filtro-toast";
 import { cn } from "@/lib/utils";
 
 type Filtro = "todos" | StatusProcesso;
@@ -46,11 +47,13 @@ const FILTROS: { id: Filtro; label: string }[] = [
   { id: "concluida", label: "Concluídas" },
   { id: "cancelada", label: "Canceladas" },
 ];
+const FILTRO_VALORES = ["todos", "em_andamento", "analisando", "concluida", "cancelada"] as const;
 
 function Dashboard() {
   const { filtro, q, ordem } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
   usePersistedFilter("status-processo:filtro", filtro, "todos", "/dashboard");
+  useInvalidFiltroToast(FILTRO_VALORES);
   type DashSearch = { filtro: Filtro; q: string; ordem: Ordem };
   const setFiltro = (f: Filtro) =>
     navigate({ search: (prev: DashSearch) => ({ ...prev, filtro: f }), replace: true });

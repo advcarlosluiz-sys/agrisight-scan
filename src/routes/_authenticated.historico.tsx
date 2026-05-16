@@ -10,6 +10,7 @@ import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-pr
 import { supabase } from "@/integrations/supabase/client";
 import { FiltroStatusIndicador } from "@/components/filtro-status-indicador";
 import { usePersistedFilter } from "@/hooks/use-persisted-filter";
+import { useInvalidFiltroToast } from "@/hooks/use-invalid-filtro-toast";
 import { cn } from "@/lib/utils";
 
 type Filtro = "todos" | StatusProcesso;
@@ -34,11 +35,13 @@ const FILTROS: { id: Filtro; label: string }[] = [
   { id: "concluida", label: "Concluídas" },
   { id: "cancelada", label: "Canceladas" },
 ];
+const FILTRO_VALORES = ["todos", "em_andamento", "analisando", "concluida", "cancelada"] as const;
 
 function HistoricoPage() {
   const { filtro, q } = Route.useSearch();
   const navigate = useNavigate({ from: "/historico" });
   usePersistedFilter("status-processo:filtro", filtro, "todos", "/historico");
+  useInvalidFiltroToast(FILTRO_VALORES);
   const setFiltro = (f: Filtro) =>
     navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, filtro: f }), replace: true });
   const setQ = (v: string) =>
