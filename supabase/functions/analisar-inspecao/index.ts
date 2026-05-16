@@ -55,7 +55,15 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "missing_auth" }, 401);
 
-    let body: { inspecao_id?: string; mode?: "preview" | "save"; analise?: unknown };
+    let body: {
+      inspecao_id?: string;
+      mode?: "preview" | "save";
+      analise?: unknown;
+      degradado?: string | null;
+      degradado_codigo?: string | null;
+      degradado_detalhe?: string | null;
+      fotos_falhadas?: number;
+    };
     try {
       body = await req.json();
     } catch {
