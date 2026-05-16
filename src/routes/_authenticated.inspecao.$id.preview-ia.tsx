@@ -109,7 +109,16 @@ function PreviewIA() {
     setSalvando(true);
     try {
       const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
-        body: { inspecao_id: id, mode: "save", analise },
+        body: {
+          inspecao_id: id,
+          mode: "save",
+          analise,
+          // Propaga metadados do fallback para serem persistidos junto da análise.
+          degradado: payload?.degradado ?? null,
+          degradado_codigo: payload?.degradado_codigo ?? null,
+          degradado_detalhe: payload?.degradado_detalhe ?? null,
+          fotos_falhadas: payload?.fotos?.falhadas ?? 0,
+        },
       });
       if (error) throw error;
       const resp = data as { error?: string; ok?: boolean };
