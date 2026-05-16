@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useRedirectIfAnalisando } from "@/components/status-processo-badge";
 import { useAuth } from "@/lib/auth-context";
-import { AlertTriangle, BellPlus, CheckCircle2, FileText, ListChecks, RefreshCw, Sparkles, UserCheck } from "lucide-react";
+import { AlertTriangle, BellPlus, CheckCircle2, Circle, FileText, ListChecks, RefreshCw, Sparkles, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -23,6 +23,18 @@ type Tarefa = {
 };
 
 const PRIO_ORDER: Record<string, number> = { alta: 0, media: 1, baixa: 2 };
+
+type TipoFoto = "geral" | "plantas" | "folhas" | "frutos" | "solo" | "plastico";
+const TIPOS_FOTO: { key: TipoFoto; label: string }[] = [
+  { key: "geral", label: "Geral" },
+  { key: "plantas", label: "Plantas" },
+  { key: "folhas", label: "Folhas" },
+  { key: "frutos", label: "Frutos" },
+  { key: "solo", label: "Solo" },
+  { key: "plastico", label: "Plástico/Túnel" },
+];
+const FOTOS_RECOMENDADO = 3;
+const TIPOS_RECOMENDADO = 2;
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
   component: ResultadoPage,
@@ -65,18 +77,23 @@ function ResultadoPage() {
       ).data,
   });
 
-  // Total de fotos enviadas para esta inspeção — usado para mostrar
-  // quantas a IA conseguiu efetivamente analisar (total - falhadas).
-  const { data: totalFotos } = useQuery({
-    queryKey: ["fotos-count", id],
+  // Resumo das fotos enviadas para esta inspeção — usado para mostrar quantas
+  // a IA analisou (total - falhadas) e quais tipos de cobertura ainda faltam.
+  const { data: fotosResumo } = useQuery({
+    queryKey: ["fotos-resumo", id],
     queryFn: async () => {
-      const { count } = await supabase
+      const { data } = await supabase
         .from("fotos_inspecao")
-        .select("id", { count: "exact", head: true })
+        .select("tipo_foto")
         .eq("inspecao_id", id);
-      return count ?? 0;
+      const rows = (data ?? []) as { tipo_foto: TipoFoto }[];
+      return {
+        total: rows.length,
+        tipos: new Set(rows.map((r) => r.tipo_foto)),
+      };
     },
   });
+  const totalFotos = fotosResumo?.total ?? 0;
 
   const tarefasQK = ["tarefas-inspecao", id] as const;
   const { data: tarefas, isLoading: tarefasLoading } = useQuery({
@@ -177,6 +194,75 @@ function ResultadoPage() {
                   )}
                 </p>
               )}
+              {(() => {
+                const tipos = fotosResumo?.tipos ?? new Set<TipoFoto>();
+                const tiposDistintos = tipos.size;
+                const faltamFotos = total < FOTOS_RECOMENDADO;
+                const faltamTipos = tiposDistintos < TIPOS_RECOMENDADO;
+                const insuficiente = faltamFotos || faltamTipos;
+                if (!insuficiente) return null;
+                return (
+                  <div
+                    role="status"
+                    className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-[12px] text-amber-900 dark:text-amber-200"
+                  >
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      <div className="min-w-0">
+                        <p className="font-medium">Cobertura de fotos insuficiente</p>
+                        <p className="opacity-80">
+                          Recomendamos pelo menos {FOTOS_RECOMENDADO} fotos cobrindo{" "}
+                          {TIPOS_RECOMENDADO} tipos diferentes. A precisão da IA pode estar limitada.
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[11px] font-medium uppercase tracking-wide opacity-70">
+                      Tipos de foto
+                    </p>
+                    <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1" aria-label="Checklist de tipos de foto">
+                      {TIPOS_FOTO.map((t) => {
+                        const ok = tipos.has(t.key);
+                        return (
+                          <li
+                            key={t.key}
+                            className={`flex items-center gap-1.5 text-[12px] ${ok ? "" : "opacity-70"}`}
+                          >
+                            {ok ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                            ) : (
+                              <Circle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            )}
+                            <span className={ok ? "line-through opacity-70" : "font-medium"}>{t.label}</span>
+                            <span className="sr-only">{ok ? " (enviado)" : " (faltando)"}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <p className="mt-2 text-[11px] opacity-80">
+                      {faltamFotos && (
+                        <>
+                          Faltam{" "}
+                          <span className="font-medium">
+                            {Math.max(0, FOTOS_RECOMENDADO - total)} foto
+                            {FOTOS_RECOMENDADO - total === 1 ? "" : "s"}
+                          </span>
+                          .{" "}
+                        </>
+                      )}
+                      {faltamTipos && (
+                        <>
+                          Cobrir mais{" "}
+                          <span className="font-medium">
+                            {Math.max(0, TIPOS_RECOMENDADO - tiposDistintos)} tipo
+                            {TIPOS_RECOMENDADO - tiposDistintos === 1 ? "" : "s"}
+                          </span>{" "}
+                          diferente{TIPOS_RECOMENDADO - tiposDistintos === 1 ? "" : "s"}.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                );
+              })()}
               {precisaReanalisar && (
                 <Button
                   type="button"
