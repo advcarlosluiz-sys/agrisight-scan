@@ -177,6 +177,7 @@ export type Database = {
           id: string
           inspecao_id: string
           legenda: string | null
+          ordem: number
           organizacao_id: string
           storage_path: string
           tipo_foto: Database["public"]["Enums"]["tipo_foto"]
@@ -186,6 +187,7 @@ export type Database = {
           id?: string
           inspecao_id: string
           legenda?: string | null
+          ordem?: number
           organizacao_id: string
           storage_path: string
           tipo_foto: Database["public"]["Enums"]["tipo_foto"]
@@ -195,6 +197,7 @@ export type Database = {
           id?: string
           inspecao_id?: string
           legenda?: string | null
+          ordem?: number
           organizacao_id?: string
           storage_path?: string
           tipo_foto?: Database["public"]["Enums"]["tipo_foto"]
