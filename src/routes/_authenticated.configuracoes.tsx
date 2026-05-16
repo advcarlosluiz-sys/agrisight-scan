@@ -159,6 +159,14 @@ function Cfg() {
         )}
       </section>
 
+      {/* Agrônomo padrão */}
+      <AgronomoSection
+        orgId={(perfil as any)?.organizacao_id}
+        org={(perfil as any)?.organizacao}
+        canEdit={isAdmin}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["perfil", user?.id] })}
+      />
+
       {/* Preferências de Sincronização */}
       <section className="mt-4 rounded-2xl border bg-card p-4 shadow-card">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
