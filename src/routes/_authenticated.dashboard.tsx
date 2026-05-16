@@ -9,6 +9,7 @@ import { CopyFilterLinkButton } from "@/components/copy-filter-link-button";
 import { StatusPill, STATUS_DOT } from "@/components/status-pill";
 import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
 import { AcoesPorStatus } from "@/components/acoes-por-status";
+import { FiltroStatusIndicador } from "@/components/filtro-status-indicador";
 import { supabase } from "@/integrations/supabase/client";
 import { usePersistedFilter } from "@/hooks/use-persisted-filter";
 import { cn } from "@/lib/utils";
@@ -149,6 +150,7 @@ function Dashboard() {
 
   return (
     <AppShell title="Dashboard" back="/">
+      <FiltroStatusIndicador filtro={filtro} onClear={() => setFiltro("todos")} />
       <div className="mb-3 flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
