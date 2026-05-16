@@ -100,6 +100,11 @@ function AnalisandoPage() {
   const [motivoCancelamento, setMotivoCancelamento] = useState("");
   const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
   const [fotos, setFotos] = useState<FotoItem[]>([]);
+  // Reprocessamento automático em falhas transitórias (timeout/rede/5xx/429).
+  // Limite conservador para não acumular custo nem deixar o usuário esperando.
+  const [tentativa, setTentativa] = useState(1);
+  const MAX_TENTATIVAS = 3;
+  const CODIGOS_TRANSITORIOS = new Set(["timeout", "rede", "http_5xx"]);
   const ranRef = useRef(false);
   const executandoRef = useRef(false);
   const canceladoRef = useRef(false);
