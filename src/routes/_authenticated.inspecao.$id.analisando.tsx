@@ -102,6 +102,9 @@ function AnalisandoPage() {
   const canceladoRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const statusProcesso = useStatusProcesso(id);
+  // Mantém a tela sincronizada com o status real (redireciona se concluída
+  // ou se voltou para em_andamento/cancelada em outra aba).
+  useSyncStatusRoute(id);
 
   const marcarStatus = (fotoId: string, status: FotoStatus) =>
     setFotos((prev) => prev.map((f) => (f.id === fotoId ? { ...f, status } : f)));
