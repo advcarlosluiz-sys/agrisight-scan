@@ -75,8 +75,10 @@ function SolicitacoesPage() {
 
   const setStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Solic["status"] }) => {
-      const patch: Record<string, unknown> = { status };
-      if (status === "atendida") patch.atendida_em = new Date().toISOString();
+      const patch =
+        status === "atendida"
+          ? { status, atendida_em: new Date().toISOString() }
+          : { status };
       const { error } = await supabase
         .from("solicitacoes_agronomo")
         .update(patch)

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
+import { Route as AuthenticatedSolicitacoesRouteImport } from './routes/_authenticated.solicitacoes'
 import { Route as AuthenticatedSincronizacaoRouteImport } from './routes/_authenticated.sincronizacao'
 import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated.historico'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
@@ -39,6 +40,12 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSolicitacoesRoute =
+  AuthenticatedSolicitacoesRouteImport.update({
+    id: '/solicitacoes',
+    path: '/solicitacoes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSincronizacaoRoute =
   AuthenticatedSincronizacaoRouteImport.update({
     id: '/sincronizacao',
@@ -117,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/historico': typeof AuthenticatedHistoricoRoute
   '/sincronizacao': typeof AuthenticatedSincronizacaoRoute
+  '/solicitacoes': typeof AuthenticatedSolicitacoesRoute
   '/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
   '/relatorio/$id': typeof AuthenticatedRelatorioIdRoute
   '/inspecao/$id/analisando': typeof AuthenticatedInspecaoIdAnalisandoRoute
@@ -132,6 +140,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/historico': typeof AuthenticatedHistoricoRoute
   '/sincronizacao': typeof AuthenticatedSincronizacaoRoute
+  '/solicitacoes': typeof AuthenticatedSolicitacoesRoute
   '/': typeof AuthenticatedIndexRoute
   '/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
   '/relatorio/$id': typeof AuthenticatedRelatorioIdRoute
@@ -150,6 +159,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
   '/_authenticated/sincronizacao': typeof AuthenticatedSincronizacaoRoute
+  '/_authenticated/solicitacoes': typeof AuthenticatedSolicitacoesRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
   '/_authenticated/relatorio/$id': typeof AuthenticatedRelatorioIdRoute
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/historico'
     | '/sincronizacao'
+    | '/solicitacoes'
     | '/inspecao/nova'
     | '/relatorio/$id'
     | '/inspecao/$id/analisando'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/historico'
     | '/sincronizacao'
+    | '/solicitacoes'
     | '/'
     | '/inspecao/nova'
     | '/relatorio/$id'
@@ -201,6 +213,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/historico'
     | '/_authenticated/sincronizacao'
+    | '/_authenticated/solicitacoes'
     | '/_authenticated/'
     | '/_authenticated/inspecao/nova'
     | '/_authenticated/relatorio/$id'
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/solicitacoes': {
+      id: '/_authenticated/solicitacoes'
+      path: '/solicitacoes'
+      fullPath: '/solicitacoes'
+      preLoaderRoute: typeof AuthenticatedSolicitacoesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/sincronizacao': {
@@ -332,6 +352,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
   AuthenticatedSincronizacaoRoute: typeof AuthenticatedSincronizacaoRoute
+  AuthenticatedSolicitacoesRoute: typeof AuthenticatedSolicitacoesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedInspecaoNovaRoute: typeof AuthenticatedInspecaoNovaRoute
   AuthenticatedRelatorioIdRoute: typeof AuthenticatedRelatorioIdRoute
@@ -348,6 +369,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
   AuthenticatedSincronizacaoRoute: AuthenticatedSincronizacaoRoute,
+  AuthenticatedSolicitacoesRoute: AuthenticatedSolicitacoesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedInspecaoNovaRoute: AuthenticatedInspecaoNovaRoute,
   AuthenticatedRelatorioIdRoute: AuthenticatedRelatorioIdRoute,
