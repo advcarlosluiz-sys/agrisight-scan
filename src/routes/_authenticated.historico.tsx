@@ -35,6 +35,7 @@ const FILTROS: { id: Filtro; label: string }[] = [
   { id: "concluida", label: "Concluídas" },
   { id: "cancelada", label: "Canceladas" },
 ];
+const FILTRO_VALORES = ["todos", "em_andamento", "analisando", "concluida", "cancelada"] as const;
 
 function HistoricoPage() {
   const { filtro, q } = Route.useSearch();
