@@ -39,6 +39,43 @@ function NovaInspecao() {
       (await supabase.from("canteiros").select("id, nome, variedade").eq("propriedade_id", propriedadeId).order("nome")).data ?? [],
   });
 
+  // Inspeções recentes — exibidas com badge ao vivo para acompanhar
+  // transições (em_andamento → analisando → concluída/cancelada).
+  type InspecaoRecente = {
+    id: string;
+    data_inspecao: string;
+    status_processo: StatusProcesso;
+    setor: { codigo: string | null } | null;
+  };
+  const queryClient = useQueryClient();
+  const { data: recentes } = useQuery({
+    queryKey: ["nova-inspecao-recentes"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("inspecoes")
+        .select("id, data_inspecao, status_processo, setor:setor_id(codigo)")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      return (data ?? []) as unknown as InspecaoRecente[];
+    },
+  });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("nova-inspecao-recentes-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "inspecoes" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["nova-inspecao-recentes"] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   const iniciar = async () => {
     if (!canteiroId) return toast.error("Selecione canteiro");
     setBusy(true);
