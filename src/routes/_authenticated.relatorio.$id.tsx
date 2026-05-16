@@ -115,7 +115,14 @@ function Relatorio() {
 
       {analise && (
         <div className="mt-4 rounded-2xl border bg-card p-4">
-          <h3 className="mb-2 text-sm font-semibold">Diagnóstico da IA</h3>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Diagnóstico da IA</h3>
+            {(analise as any).modelo_ia && (
+              <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                {(analise as any).modelo_ia}
+              </span>
+            )}
+          </div>
           <p className="text-sm">{(analise as any).justificativa}</p>
           {(analise as any).acoes_recomendadas?.length > 0 && (
             <>
