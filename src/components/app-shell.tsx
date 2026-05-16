@@ -1,10 +1,11 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { Leaf, ArrowLeft, LogOut, Wifi, WifiOff, CloudUpload, Loader2 } from "lucide-react";
+import { Leaf, ArrowLeft, LogOut, Wifi, WifiOff, CloudUpload, Loader2, Bell } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useConnection } from "@/lib/use-online";
 import { Button } from "@/components/ui/button";
 import { usePendingPhotos, useSyncQueueState } from "@/lib/use-sync-queue";
 import { useAutoSync } from "@/lib/use-auto-sync";
+import { useSolicitacoesPendentes } from "@/lib/use-solicitacoes-pendentes";
 
 export function AppShell({
   title,
