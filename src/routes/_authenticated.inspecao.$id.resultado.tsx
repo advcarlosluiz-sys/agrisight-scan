@@ -221,9 +221,8 @@ function ResultadoPage() {
         )}
       </Section>
 
-      <Section icon={UserCheck} title="Necessidade de agrônomo">
-        <p className="text-sm font-medium">{a.necessidade_agronomo ? "Sim — recomendamos visita técnica" : "Não — manejo padrão"}</p>
-      </Section>
+      <SolicitacaoAgronomo inspecaoId={id} analise={a} />
+
 
 
       {a.justificativa && (
