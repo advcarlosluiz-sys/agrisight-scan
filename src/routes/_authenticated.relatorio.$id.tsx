@@ -59,10 +59,11 @@ function Relatorio() {
         const a = analise as any;
         doc.setFontSize(12); doc.text("Diagnóstico IA", 14, 86);
         doc.setFontSize(10);
-        doc.text(`Confiança: ${Math.round((a.confianca ?? 0) * 100)}%`, 14, 94);
-        doc.text("Problemas: " + (a.problemas_detectados ?? []).join("; "), 14, 102, { maxWidth: 180 });
-        doc.text("Recomendações: " + (a.acoes_recomendadas ?? []).join("; "), 14, 120, { maxWidth: 180 });
-        if (a.justificativa) doc.text(a.justificativa, 14, 145, { maxWidth: 180 });
+        doc.text(`Modelo: ${a.modelo_ia ?? "-"}`, 14, 94);
+        doc.text(`Confiança: ${Math.round((a.confianca ?? 0) * 100)}%`, 14, 100);
+        doc.text("Problemas: " + (a.problemas_detectados ?? []).join("; "), 14, 108, { maxWidth: 180 });
+        doc.text("Recomendações: " + (a.acoes_recomendadas ?? []).join("; "), 14, 126, { maxWidth: 180 });
+        if (a.justificativa) doc.text(a.justificativa, 14, 151, { maxWidth: 180 });
       }
       doc.save(`relatorio-${(insp as any).setor?.codigo ?? id}.pdf`);
       toast.success("PDF gerado");
