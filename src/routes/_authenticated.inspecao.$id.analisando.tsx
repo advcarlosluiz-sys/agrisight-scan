@@ -299,6 +299,11 @@ function AnalisandoPage() {
     } catch {
       // ignora — segue cancelando localmente
     }
+    try {
+      localStorage.setItem(`analise-cancelada:${id}`, new Date().toISOString());
+    } catch {
+      // ignora
+    }
     toast.info("Análise cancelada — chamada à IA interrompida");
     navigate({ to: "/inspecao/$id/observacoes", params: { id } });
   };
