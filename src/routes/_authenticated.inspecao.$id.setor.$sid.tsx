@@ -8,11 +8,29 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Camera, Loader2, Plus, Trash2, CheckCircle2, AlertCircle, X, CloudOff, RefreshCw } from "lucide-react";
+import { Camera, Loader2, Plus, Trash2, CheckCircle2, AlertCircle, X, CloudOff, RefreshCw, GripVertical } from "lucide-react";
 import { useOnlineStatus } from "@/lib/use-online";
 import { enqueuePhoto, retryPendingPhoto, scheduleProcess } from "@/lib/sync-queue";
 import { usePendingPhotos } from "@/lib/use-sync-queue";
 import { deletePendingPhoto } from "@/lib/sync-queue";
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const TIPOS = [
   { key: "geral", label: "Geral" },
