@@ -37,10 +37,19 @@ function ObsPage() {
   const [busy, setBusy] = useState(false);
   const lockRef = useRef(false);
   const statusProcesso = useStatusProcesso(id);
+  const online = useOnlineStatus();
+  const fotosInfo = useInspecaoFotos(id);
+  const validacao = fotosInfo.validar(online);
 
   const analisar = async () => {
-    // Guarda síncrona contra cliques múltiplos rápidos (antes do re-render)
     if (lockRef.current || busy) return;
+    // Revalida no momento do clique
+    await fotosInfo.refetch();
+    const v = fotosInfo.validar(online);
+    if (!v.ok) {
+      toast.error(v.mensagem ?? "Não é possível analisar agora");
+      return;
+    }
     lockRef.current = true;
     setBusy(true);
     try {
@@ -54,7 +63,6 @@ function ObsPage() {
       if (uErr) throw uErr;
 
       navigate({ to: "/inspecao/$id/analisando", params: { id } });
-      // Mantém o lock ativo — a navegação desmonta esta tela
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");
       lockRef.current = false;
