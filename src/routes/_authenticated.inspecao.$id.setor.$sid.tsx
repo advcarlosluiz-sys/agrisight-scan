@@ -46,7 +46,7 @@ const TIPOS = [
 const MAX_POR_TIPO = 8;
 
 type TipoKey = (typeof TIPOS)[number]["key"];
-type FotoRow = { id: string; tipo_foto: TipoKey; storage_path: string };
+type FotoRow = { id: string; tipo_foto: TipoKey; storage_path: string; ordem: number };
 type UploadStatus = "enviando" | "concluido" | "erro";
 type UploadItem = {
   id: string;
