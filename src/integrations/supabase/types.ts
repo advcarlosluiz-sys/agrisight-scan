@@ -377,6 +377,9 @@ export type Database = {
       }
       organizacoes: {
         Row: {
+          agronomo_email: string | null
+          agronomo_nome: string | null
+          agronomo_telefone: string | null
           created_at: string
           documento: string | null
           email: string | null
@@ -385,6 +388,9 @@ export type Database = {
           telefone: string | null
         }
         Insert: {
+          agronomo_email?: string | null
+          agronomo_nome?: string | null
+          agronomo_telefone?: string | null
           created_at?: string
           documento?: string | null
           email?: string | null
@@ -393,6 +399,9 @@ export type Database = {
           telefone?: string | null
         }
         Update: {
+          agronomo_email?: string | null
+          agronomo_nome?: string | null
+          agronomo_telefone?: string | null
           created_at?: string
           documento?: string | null
           email?: string | null
@@ -707,6 +716,63 @@ export type Database = {
           },
         ]
       }
+      solicitacoes_agronomo: {
+        Row: {
+          acoes: Json
+          agronomo_email: string | null
+          agronomo_nome: string | null
+          agronomo_telefone: string | null
+          analise_id: string | null
+          atendida_em: string | null
+          created_at: string
+          criado_por: string | null
+          id: string
+          inspecao_id: string
+          lida: boolean
+          observacao: string | null
+          organizacao_id: string
+          prioridade: Database["public"]["Enums"]["prioridade_tarefa"]
+          problemas: Json
+          status: Database["public"]["Enums"]["status_solicitacao_agronomo"]
+        }
+        Insert: {
+          acoes?: Json
+          agronomo_email?: string | null
+          agronomo_nome?: string | null
+          agronomo_telefone?: string | null
+          analise_id?: string | null
+          atendida_em?: string | null
+          created_at?: string
+          criado_por?: string | null
+          id?: string
+          inspecao_id: string
+          lida?: boolean
+          observacao?: string | null
+          organizacao_id: string
+          prioridade?: Database["public"]["Enums"]["prioridade_tarefa"]
+          problemas?: Json
+          status?: Database["public"]["Enums"]["status_solicitacao_agronomo"]
+        }
+        Update: {
+          acoes?: Json
+          agronomo_email?: string | null
+          agronomo_nome?: string | null
+          agronomo_telefone?: string | null
+          analise_id?: string | null
+          atendida_em?: string | null
+          created_at?: string
+          criado_por?: string | null
+          id?: string
+          inspecao_id?: string
+          lida?: boolean
+          observacao?: string | null
+          organizacao_id?: string
+          prioridade?: Database["public"]["Enums"]["prioridade_tarefa"]
+          problemas?: Json
+          status?: Database["public"]["Enums"]["status_solicitacao_agronomo"]
+        }
+        Relationships: []
+      }
       tarefas_recomendadas: {
         Row: {
           created_at: string
@@ -806,6 +872,11 @@ export type Database = {
         | "em_andamento"
         | "analisando"
         | "concluida"
+        | "cancelada"
+      status_solicitacao_agronomo:
+        | "pendente"
+        | "visualizada"
+        | "atendida"
         | "cancelada"
       status_tarefa: "pendente" | "em_andamento" | "concluida" | "cancelada"
       tipo_foto: "geral" | "plantas" | "folhas" | "frutos" | "solo" | "plastico"
@@ -944,6 +1015,12 @@ export const Constants = {
         "em_andamento",
         "analisando",
         "concluida",
+        "cancelada",
+      ],
+      status_solicitacao_agronomo: [
+        "pendente",
+        "visualizada",
+        "atendida",
         "cancelada",
       ],
       status_tarefa: ["pendente", "em_andamento", "concluida", "cancelada"],
