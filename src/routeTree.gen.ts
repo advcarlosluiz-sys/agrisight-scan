@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
 import { Route as AuthenticatedSolicitacoesRouteImport } from './routes/_authenticated.solicitacoes'
 import { Route as AuthenticatedSincronizacaoRouteImport } from './routes/_authenticated.sincronizacao'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated.onboarding'
 import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated.historico'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated.configuracoes'
@@ -52,6 +53,11 @@ const AuthenticatedSincronizacaoRoute =
     path: '/sincronizacao',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
   id: '/historico',
   path: '/historico',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/historico': typeof AuthenticatedHistoricoRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/sincronizacao': typeof AuthenticatedSincronizacaoRoute
   '/solicitacoes': typeof AuthenticatedSolicitacoesRoute
   '/inspecao/nova': typeof AuthenticatedInspecaoNovaRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/historico': typeof AuthenticatedHistoricoRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
   '/sincronizacao': typeof AuthenticatedSincronizacaoRoute
   '/solicitacoes': typeof AuthenticatedSolicitacoesRoute
   '/': typeof AuthenticatedIndexRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/sincronizacao': typeof AuthenticatedSincronizacaoRoute
   '/_authenticated/solicitacoes': typeof AuthenticatedSolicitacoesRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/historico'
+    | '/onboarding'
     | '/sincronizacao'
     | '/solicitacoes'
     | '/inspecao/nova'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/historico'
+    | '/onboarding'
     | '/sincronizacao'
     | '/solicitacoes'
     | '/'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
     | '/_authenticated/historico'
+    | '/_authenticated/onboarding'
     | '/_authenticated/sincronizacao'
     | '/_authenticated/solicitacoes'
     | '/_authenticated/'
@@ -265,6 +277,13 @@ declare module '@tanstack/react-router' {
       path: '/sincronizacao'
       fullPath: '/sincronizacao'
       preLoaderRoute: typeof AuthenticatedSincronizacaoRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/historico': {
@@ -351,6 +370,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedSincronizacaoRoute: typeof AuthenticatedSincronizacaoRoute
   AuthenticatedSolicitacoesRoute: typeof AuthenticatedSolicitacoesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -368,6 +388,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedSincronizacaoRoute: AuthenticatedSincronizacaoRoute,
   AuthenticatedSolicitacoesRoute: AuthenticatedSolicitacoesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
