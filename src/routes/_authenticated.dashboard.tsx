@@ -49,7 +49,7 @@ const FILTROS: { id: Filtro; label: string }[] = [
 function Dashboard() {
   const { filtro, q, ordem } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
-  usePersistedFilter("dashboard:filtro", filtro, "todos", "/dashboard");
+  usePersistedFilter("status-processo:filtro", filtro, "todos", "/dashboard");
   type DashSearch = { filtro: Filtro; q: string; ordem: Ordem };
   const setFiltro = (f: Filtro) =>
     navigate({ search: (prev: DashSearch) => ({ ...prev, filtro: f }), replace: true });
