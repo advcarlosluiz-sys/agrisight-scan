@@ -196,9 +196,21 @@ function Dashboard() {
         </div>
       </div>
 
-      <h3 className="mt-5 mb-2 text-sm font-semibold">
-        Últimas inspeções{filtro !== "todos" ? ` · ${FILTROS.find((f) => f.id === filtro)?.label}` : ""}
-      </h3>
+      <div className="mt-5 mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">
+          Últimas inspeções{filtro !== "todos" ? ` · ${FILTROS.find((f) => f.id === filtro)?.label}` : ""}
+        </h3>
+        <select
+          value={ordem}
+          onChange={(e) => setOrdem(e.target.value as Ordem)}
+          aria-label="Ordenar por"
+          className="h-8 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground outline-none focus:border-primary"
+        >
+          {(Object.keys(ORDEM_CONFIG) as Ordem[]).map((o) => (
+            <option key={o} value={o}>{ORDEM_CONFIG[o].label}</option>
+          ))}
+        </select>
+      </div>
       <div className="space-y-2">
         {inspecoesFiltradas.length === 0 && (
           <p className="text-sm text-muted-foreground">Nenhuma inspeção neste filtro.</p>
@@ -220,7 +232,7 @@ function Dashboard() {
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-center">
+      <div ref={sentinelaRef} className="mt-3 flex justify-center">
         {hasNextPage ? (
           <button
             type="button"
