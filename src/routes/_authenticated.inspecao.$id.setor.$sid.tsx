@@ -125,7 +125,46 @@ function ColetaPage() {
     };
   }, [fotos]);
 
-  const fotosPorTipo = (tipo: TipoKey) => (fotos ?? []).filter((f) => f.tipo_foto === tipo);
+  const fotosPorTipo = (tipo: TipoKey): FotoRow[] => {
+    const all = (fotos ?? []).filter((f) => f.tipo_foto === tipo);
+    const ordens = ordemLocal[tipo];
+    if (!ordens || ordens.length === 0) return all;
+    const byId = new Map(all.map((f) => [f.id, f] as const));
+    const reordered = ordens.map((fid) => byId.get(fid)).filter(Boolean) as FotoRow[];
+    // Inclui qualquer foto que apareceu depois (ex.: novo upload) ao final.
+    for (const f of all) if (!ordens.includes(f.id)) reordered.push(f);
+    return reordered;
+  };
+
+  // Sensores de DnD — pointer (mouse), toque (mobile) e teclado (acessibilidade).
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = async (tipo: TipoKey, e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const atual = fotosPorTipo(tipo).map((f) => f.id);
+    const from = atual.indexOf(active.id as string);
+    const to = atual.indexOf(over.id as string);
+    if (from < 0 || to < 0) return;
+    const novaOrdem = arrayMove(atual, from, to);
+    // Otimista
+    setOrdemLocal((prev) => ({ ...prev, [tipo]: novaOrdem }));
+    // Persiste — uma atualização por foto. Falhas mostram toast e revertem.
+    try {
+      await Promise.all(
+        novaOrdem.map((fid, idx) =>
+          supabase.from("fotos_inspecao").update({ ordem: idx }).eq("id", fid),
+        ),
+      );
+    } catch (err) {
+      toast.error("Não foi possível salvar a nova ordem");
+      setOrdemLocal((prev) => ({ ...prev, [tipo]: atual }));
+    }
+  };
 
   // Conta tudo que já "ocupa vaga" para o tipo: salvas + em upload ativo + na fila offline.
   const ocupadasPorTipo = (tipo: TipoKey) =>
