@@ -221,11 +221,13 @@ function Dashboard() {
         )}
       </div>
 
-      {tarefas && tarefas.length > 0 && (
+      {tarefasFiltradas.length > 0 && (
         <>
-          <h3 className="mt-5 mb-2 text-sm font-semibold">Tarefas recomendadas</h3>
+          <h3 className="mt-5 mb-2 text-sm font-semibold">
+            Tarefas recomendadas{filtro !== "todos" ? ` · ${FILTROS.find((f) => f.id === filtro)?.label}` : ""}
+          </h3>
           <div className="space-y-2">
-            {tarefas.map((t: any) => (
+            {tarefasFiltradas.map((t: any) => (
               <div key={t.id} className="rounded-xl border bg-card p-3 text-sm">
                 <p className="font-medium">{t.titulo}</p>
                 <p className="text-xs capitalize text-muted-foreground">Prioridade: {t.prioridade}</p>
