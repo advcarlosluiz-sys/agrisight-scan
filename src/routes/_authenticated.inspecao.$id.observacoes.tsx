@@ -104,6 +104,33 @@ function ObsPage() {
         <span className="text-xs text-muted-foreground">Status da inspeção</span>
         <StatusProcessoBadge status={statusProcesso} />
       </div>
+
+      {canceladaEm ? (
+        <div className="mb-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3">
+          <div className="flex items-start gap-2">
+            <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <div className="flex-1 space-y-1 text-sm">
+              <div className="font-medium text-destructive">Análise cancelada</div>
+              <p className="text-xs text-muted-foreground">
+                Você interrompeu a análise em{" "}
+                {canceladaEm.toLocaleString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                . Revise as observações e inicie novamente quando quiser.
+              </p>
+              <div className="pt-1">
+                <Button size="sm" variant="ghost" onClick={dispensarAviso}>
+                  Dispensar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="space-y-2 rounded-2xl border bg-card p-4">
         {OBS.map(([k, label]) => (
           <label key={k} className="flex items-center gap-3 rounded-lg p-2 active:bg-muted">
