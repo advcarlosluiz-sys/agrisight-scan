@@ -102,7 +102,58 @@ function ObsPage() {
         />
       </div>
 
-      <Button className="mt-6 h-12 w-full text-base" onClick={analisar} disabled={busy}>
+      {/* Card de status de fotos */}
+      <div
+        className={`mt-4 rounded-2xl border p-4 ${
+          validacao.nivel === "bloqueio"
+            ? "border-destructive/40 bg-destructive/10"
+            : validacao.nivel === "aviso"
+            ? "border-yellow-500/40 bg-yellow-500/10"
+            : "border-border bg-card"
+        }`}
+      >
+        <div className="flex items-start gap-2">
+          {validacao.nivel === "bloqueio" ? (
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+          ) : validacao.nivel === "aviso" ? (
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
+          ) : (
+            <Camera className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          )}
+          <div className="flex-1 space-y-1 text-sm">
+            <div className="font-medium">
+              Fotos: {fotosInfo.total} enviada{fotosInfo.total === 1 ? "" : "s"} ·{" "}
+              {fotosInfo.tiposDistintos} tipo{fotosInfo.tiposDistintos === 1 ? "" : "s"}
+              {fotosInfo.pendentes > 0 ? ` · ${fotosInfo.pendentes} pendente${fotosInfo.pendentes > 1 ? "s" : ""}` : ""}
+            </div>
+            {validacao.mensagem ? (
+              <p className="text-xs text-muted-foreground">{validacao.mensagem}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Tudo certo para a análise multimodal.</p>
+            )}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate({ to: "/inspecao/$id", params: { id } })}
+              >
+                <Camera className="mr-1 h-3 w-3" /> Adicionar/ver fotos
+              </Button>
+              {validacao.acao === "sincronizar" ? (
+                <Button size="sm" variant="outline" onClick={() => navigate({ to: "/sincronizacao" })}>
+                  Ir para Sincronização
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Button
+        className="mt-4 h-12 w-full text-base"
+        onClick={analisar}
+        disabled={busy || fotosInfo.loading || !validacao.ok}
+      >
         {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
         Salvar e Analisar com IA
       </Button>
