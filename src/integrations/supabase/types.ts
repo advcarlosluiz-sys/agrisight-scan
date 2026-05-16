@@ -858,6 +858,54 @@ export type Database = {
           },
         ]
       }
+      tentativas_analise_ia: {
+        Row: {
+          created_at: string
+          degradado: boolean
+          degradado_codigo: string | null
+          degradado_detalhe: string | null
+          duracao_ms: number | null
+          erro_mensagem: string | null
+          http_status: number | null
+          id: string
+          inspecao_id: string
+          modelo_ia: string | null
+          organizacao_id: string
+          sucesso: boolean
+          tentativa: number
+        }
+        Insert: {
+          created_at?: string
+          degradado?: boolean
+          degradado_codigo?: string | null
+          degradado_detalhe?: string | null
+          duracao_ms?: number | null
+          erro_mensagem?: string | null
+          http_status?: number | null
+          id?: string
+          inspecao_id: string
+          modelo_ia?: string | null
+          organizacao_id: string
+          sucesso?: boolean
+          tentativa: number
+        }
+        Update: {
+          created_at?: string
+          degradado?: boolean
+          degradado_codigo?: string | null
+          degradado_detalhe?: string | null
+          duracao_ms?: number | null
+          erro_mensagem?: string | null
+          http_status?: number | null
+          id?: string
+          inspecao_id?: string
+          modelo_ia?: string | null
+          organizacao_id?: string
+          sucesso?: boolean
+          tentativa?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
