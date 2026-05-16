@@ -291,12 +291,13 @@ function AnalisandoPage() {
     void executar();
   }, [executar]);
 
-  const cancelar = async () => {
+  const cancelar = async (motivo: string) => {
     canceladoRef.current = true;
     // Aborta a requisição em andamento — o fechamento da conexão dispara
     // req.signal na Edge Function, que cancela a chamada à IA.
     abortRef.current?.abort();
     abortRef.current = null;
+    const motivoLimpo = motivo.trim();
     try {
       await supabase
         .from("inspecoes")
@@ -306,7 +307,10 @@ function AnalisandoPage() {
       // ignora — segue cancelando localmente
     }
     try {
-      localStorage.setItem(`analise-cancelada:${id}`, new Date().toISOString());
+      localStorage.setItem(
+        `analise-cancelada:${id}`,
+        JSON.stringify({ em: new Date().toISOString(), motivo: motivoLimpo }),
+      );
     } catch {
       // ignora
     }
