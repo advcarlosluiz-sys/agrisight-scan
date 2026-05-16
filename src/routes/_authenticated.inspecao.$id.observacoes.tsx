@@ -226,14 +226,38 @@ function ObsPage() {
         </div>
       </div>
 
-      <Button
-        className="mt-4 h-12 w-full text-base"
-        onClick={analisar}
-        disabled={busy || fotosInfo.loading || !validacao.ok}
-      >
-        {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-        Salvar e Analisar com IA
-      </Button>
+      {(() => {
+        const bloqueioStatus =
+          statusProcesso === "analisando" ||
+          statusProcesso === "cancelada" ||
+          statusProcesso === "concluida";
+        const avisoStatus =
+          statusProcesso === "analisando"
+            ? "Já existe uma análise em andamento para esta inspeção. Acompanhe na tela de Analisando antes de iniciar outra."
+            : statusProcesso === "concluida"
+            ? "Esta inspeção já foi concluída. Abra o resultado ou use 'Reanalisar' para gerar uma nova análise."
+            : statusProcesso === "cancelada"
+            ? "A última análise foi cancelada. Dispense o aviso de cancelamento acima para liberar uma nova execução."
+            : null;
+        return (
+          <>
+            {avisoStatus ? (
+              <div className="mt-4 flex items-start gap-2 rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-3 text-xs text-yellow-900 dark:text-yellow-200">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
+                <span>{avisoStatus}</span>
+              </div>
+            ) : null}
+            <Button
+              className="mt-4 h-12 w-full text-base"
+              onClick={analisar}
+              disabled={busy || fotosInfo.loading || !validacao.ok || bloqueioStatus}
+            >
+              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              Salvar e Analisar com IA
+            </Button>
+          </>
+        );
+      })()}
     </AppShell>
   );
 }
