@@ -286,6 +286,10 @@ function AnalisandoPage() {
 
   const cancelar = async () => {
     canceladoRef.current = true;
+    // Aborta a requisição em andamento — o fechamento da conexão dispara
+    // req.signal na Edge Function, que cancela a chamada à IA.
+    abortRef.current?.abort();
+    abortRef.current = null;
     try {
       await supabase
         .from("inspecoes")
@@ -294,7 +298,7 @@ function AnalisandoPage() {
     } catch {
       // ignora — segue cancelando localmente
     }
-    toast.info("Análise cancelada");
+    toast.info("Análise cancelada — chamada à IA interrompida");
     navigate({ to: "/inspecao/$id/observacoes", params: { id } });
   };
 
