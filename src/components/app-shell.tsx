@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useConnection } from "@/lib/use-online";
 import { Button } from "@/components/ui/button";
 import { usePendingPhotos, useSyncQueueState } from "@/lib/use-sync-queue";
+import { useAutoSync } from "@/lib/use-auto-sync";
 
 export function AppShell({
   title,
@@ -21,6 +22,7 @@ export function AppShell({
   const pending = usePendingPhotos();
   const { processing } = useSyncQueueState();
   const totalPendentes = pending.length;
+  useAutoSync();
 
   return (
     <div className="min-h-dvh bg-background">
