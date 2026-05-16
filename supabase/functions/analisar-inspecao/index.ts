@@ -53,15 +53,19 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "missing_auth" }, 401);
 
-    let body: { inspecao_id?: string };
+    let body: { inspecao_id?: string; mode?: "preview" | "save"; analise?: unknown };
     try {
       body = await req.json();
     } catch {
       return json({ error: "JSON inválido no corpo da requisição" }, 400);
     }
     const inspecao_id = body?.inspecao_id;
+    const mode: "preview" | "save" = body?.mode === "save" ? "save" : "preview";
     if (!inspecao_id || typeof inspecao_id !== "string") {
       return json({ error: "inspecao_id obrigatório" }, 400);
+    }
+    if (mode === "save" && (!body.analise || typeof body.analise !== "object")) {
+      return json({ error: "analise obrigatória no modo save" }, 400);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
