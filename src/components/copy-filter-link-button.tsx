@@ -18,10 +18,41 @@ export function CopyFilterLinkButton({ className }: { className?: string }) {
     };
   }, []);
 
-  const onClick = async () => {
+  const copyViaTextarea = (text: string): boolean => {
+    if (typeof document === "undefined") return false;
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    // Keep it off-screen but selectable; readOnly avoids mobile keyboard popup.
+    textarea.setAttribute("readonly", "");
+    textarea.setAttribute("aria-hidden", "true");
+    textarea.style.position = "fixed";
+    textarea.style.top = "0";
+    textarea.style.left = "0";
+    textarea.style.width = "1px";
+    textarea.style.height = "1px";
+    textarea.style.padding = "0";
+    textarea.style.border = "none";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    const previousActive = document.activeElement as HTMLElement | null;
+    let ok = false;
     try {
-      const url = window.location.href;
-      await navigator.clipboard.writeText(url);
+      textarea.select();
+      textarea.setSelectionRange(0, text.length);
+      ok = document.execCommand("copy");
+    } catch {
+      ok = false;
+    } finally {
+      document.body.removeChild(textarea);
+      // Restore focus so the user's keyboard context isn't lost.
+      previousActive?.focus?.();
+    }
+    return ok;
+  };
+
+  const onClick = async () => {
+    const url = window.location.href;
+    const markCopied = () => {
       setCopied(true);
       toast.success("Link copiado para a área de transferência", {
         description: url,
@@ -33,11 +64,34 @@ export function CopyFilterLinkButton({ className }: { className?: string }) {
         setCopied(false);
         timerRef.current = null;
       }, FEEDBACK_MS);
-    } catch {
-      toast.error("Não foi possível copiar o link", { id: "copy-filter-link" });
-      setCopied(false);
+    };
+
+    // 1) Modern async Clipboard API (requires secure context + permission).
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+        markCopied();
+        return;
+      } catch {
+        // fall through to legacy fallback
+      }
     }
+
+    // 2) Legacy fallback via temporary selection (works on http://, older
+    //    browsers, and inside iframes that block the async API).
+    if (copyViaTextarea(url)) {
+      markCopied();
+      return;
+    }
+
+    // 3) Final failure — surface a clear error.
+    toast.error("Não foi possível copiar o link", {
+      description: "Copie manualmente da barra de endereço.",
+      id: "copy-filter-link",
+    });
+    setCopied(false);
   };
+
 
   // Native <button> already triggers onClick on Enter and Space; we keep the
   // default behavior and only add explicit handling to prevent page scroll on
