@@ -154,6 +154,7 @@ function ResultadoPage() {
           const falhadas = typeof rc._fotos_falhadas === "number" ? rc._fotos_falhadas : 0;
           const total = totalFotos ?? 0;
           const usadas = Math.max(0, total - falhadas);
+          const precisaReanalisar = Boolean(degradado) || falhadas > 0;
           return (
             <>
               {degradado && (
@@ -175,6 +176,24 @@ function ResultadoPage() {
                     <span className="text-destructive"> · {falhadas} {falhadas === 1 ? "falhou" : "falharam"}</span>
                   )}
                 </p>
+              )}
+              {precisaReanalisar && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={reanalisar}
+                  disabled={reanalisando}
+                  className="mt-3 w-full"
+                  aria-label={
+                    degradado
+                      ? "Reanalisar inspeção com a IA — análise anterior gerada por fallback"
+                      : `Reanalisar inspeção com a IA — ${falhadas} ${falhadas === 1 ? "foto falhou" : "fotos falharam"}`
+                  }
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${reanalisando ? "animate-spin" : ""}`} aria-hidden="true" />
+                  {reanalisando ? "Reiniciando…" : "Reanalisar com IA"}
+                </Button>
               )}
             </>
           );
