@@ -119,10 +119,13 @@ export function scheduleProcess(delay = 0) {
 export async function processQueue() {
   if (processing) return;
   if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  if (Date.now() < pauseUntil) return;
   processing = true;
+  cancelRequested = false;
   emit();
   try {
     while (true) {
+      if (cancelRequested) break;
       const now = Date.now();
       const next = await offlineDB.pendingPhotos
         .where("status")
@@ -160,8 +163,11 @@ export async function processQueue() {
       }
     }
   } finally {
+    const wasCancelled = cancelRequested;
     processing = false;
+    cancelRequested = false;
     emit();
+    if (wasCancelled) return; // não reagenda — usuário pediu para parar
     // se ainda há itens pendentes futuros, agenda
     const upcoming = await offlineDB.pendingPhotos
       .where("status")
