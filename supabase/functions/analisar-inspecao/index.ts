@@ -162,7 +162,11 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
 
     if (mode === "preview") {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), AI_TIMEOUT_MS);
+      const timer = setTimeout(() => ctrl.abort(new DOMException("timeout", "TimeoutError")), AI_TIMEOUT_MS);
+      // Propaga o cancelamento do cliente (fechamento da conexão) para a chamada da IA.
+      const onClientAbort = () => ctrl.abort(new DOMException("client cancelled", "ClientAbortError"));
+      if (req.signal.aborted) onClientAbort();
+      else req.signal.addEventListener("abort", onClientAbort, { once: true });
 
       try {
         const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -217,11 +221,19 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
           }
         }
       } catch (e) {
-        const aborted = (e as Error)?.name === "AbortError";
-        console.error(aborted ? "Timeout da IA" : "Erro de rede com IA:", e);
-        aiDegradado = aborted ? "Tempo limite da IA excedido" : "Falha de rede com a IA";
+        const name = (e as Error)?.name;
+        const clientAborted = req.signal.aborted || name === "ClientAbortError";
+        const timedOut = name === "TimeoutError";
+        if (clientAborted) {
+          console.warn("Análise cancelada pelo cliente — chamada à IA abortada");
+          // Cliente já desconectou; resposta não chega, mas mantemos contrato.
+          return json({ error: "Análise cancelada pelo cliente", cancelado: true }, 499);
+        }
+        console.error(timedOut ? "Timeout da IA" : "Erro de rede com IA:", e);
+        aiDegradado = timedOut ? "Tempo limite da IA excedido" : "Falha de rede com a IA";
       } finally {
         clearTimeout(timer);
+        req.signal.removeEventListener("abort", onClientAbort);
       }
 
       // 6. Fallback heurístico se IA falhou
