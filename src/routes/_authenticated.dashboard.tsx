@@ -47,6 +47,7 @@ const FILTROS: { id: Filtro; label: string }[] = [
   { id: "concluida", label: "Concluídas" },
   { id: "cancelada", label: "Canceladas" },
 ];
+const FILTRO_VALORES = ["todos", "em_andamento", "analisando", "concluida", "cancelada"] as const;
 
 function Dashboard() {
   const { filtro, q, ordem } = Route.useSearch();
