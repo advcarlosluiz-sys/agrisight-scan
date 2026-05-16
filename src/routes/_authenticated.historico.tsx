@@ -113,6 +113,19 @@ function HistoricoPage() {
         </div>
         <CopyFilterLinkButton />
       </div>
+      {filtro !== "todos" && (
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setFiltro("todos")}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground active:scale-[0.98]"
+            aria-label="Limpar filtro de status"
+          >
+            <X className="h-3 w-3" />
+            Limpar filtro
+          </button>
+        </div>
+      )}
       <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
         {FILTROS.map((f) => {
           const ativo = filtro === f.id;

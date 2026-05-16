@@ -173,10 +173,21 @@ function Dashboard() {
         </div>
         <CopyFilterLinkButton />
       </div>
-      <div className="mb-2">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Status do processo
         </h3>
+        {filtro !== "todos" && (
+          <button
+            type="button"
+            onClick={() => setFiltro("todos")}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground active:scale-[0.98]"
+            aria-label="Limpar filtro de status"
+          >
+            <X className="h-3 w-3" />
+            Limpar filtro
+          </button>
+        )}
       </div>
       <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
         <KpiProc label="Todos" value={cntProc("todos")} ativo={filtro === "todos"} onClick={() => setFiltro("todos")} tone="neutral" />
