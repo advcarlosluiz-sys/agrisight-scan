@@ -130,20 +130,28 @@ function SyncCard({ offline, pendentes }: { offline: boolean; pendentes: number 
       return;
     }
     setRunning(true);
-    await toast.promise(syncNow(), {
+    const p = syncNow();
+    toast.promise(p, {
       loading: `Enviando ${pendentes} item${pendentes > 1 ? "s" : ""}…`,
       success: (r) => {
         if (r.falhas === 0 && r.restantes === 0) {
-          return `${r.enviados} item${r.enviados !== 1 ? "s" : ""} sincronizado${r.enviados !== 1 ? "s" : ""} com sucesso`;
+          return `${r.enviados} item${r.enviados !== 1 ? "s" : ""} sincronizado${r.enviados !== 1 ? "s" : ""}`;
         }
-        return {
-          message: `${r.enviados} enviado${r.enviados !== 1 ? "s" : ""}, ${r.falhas} com falha`,
-          description: r.restantes > 0 ? `${r.restantes} ainda na fila — tentaremos novamente em segundos.` : undefined,
-        } as unknown as string;
+        const partes: string[] = [];
+        if (r.enviados) partes.push(`${r.enviados} enviado${r.enviados !== 1 ? "s" : ""}`);
+        if (r.falhas) partes.push(`${r.falhas} com falha`);
+        if (r.restantes) partes.push(`${r.restantes} na fila`);
+        return partes.join(" · ") || "Sincronização concluída";
       },
       error: (e: unknown) => (e instanceof Error ? e.message : "Falha ao sincronizar"),
-    }).unwrap?.().catch(() => undefined);
-    setRunning(false);
+    });
+    try {
+      await p;
+    } catch {
+      /* erro já mostrado no toast */
+    } finally {
+      setRunning(false);
+    }
   };
 
   return (
