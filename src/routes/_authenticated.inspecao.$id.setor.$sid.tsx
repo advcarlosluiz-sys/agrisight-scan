@@ -96,6 +96,13 @@ function ColetaPage() {
 
   const fotosPorTipo = (tipo: TipoKey) => (fotos ?? []).filter((f) => f.tipo_foto === tipo);
 
+  // Conta tudo que já "ocupa vaga" para o tipo: salvas + em upload ativo + na fila offline.
+  const ocupadasPorTipo = (tipo: TipoKey) =>
+    fotosPorTipo(tipo).length +
+    uploads.filter((u) => u.tipo === tipo && u.status !== "erro").length +
+    pendingDaInspecao.filter((p) => p.tipo_foto === tipo).length;
+  const restantePorTipo = (tipo: TipoKey) => Math.max(0, MAX_POR_TIPO - ocupadasPorTipo(tipo));
+
   // Quando há itens na fila desta inspeção, faz polling leve para atualizar a grade
   // assim que a fila concluir o envio.
   useEffect(() => {
