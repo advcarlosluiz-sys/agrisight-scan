@@ -327,6 +327,55 @@ function ResultadoPage() {
         })()}
       </div>
 
+      {tentativasIA && tentativasIA.length > 0 && (
+        <details className="rounded-xl border bg-card">
+          <summary className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 text-sm font-medium">
+            <span>Histórico de tentativas da IA</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {tentativasIA.length} {tentativasIA.length === 1 ? "registro" : "registros"}
+            </span>
+          </summary>
+          <ul className="divide-y border-t text-xs">
+            {tentativasIA.map((t) => {
+              const quando = new Date(t.created_at as string).toLocaleString();
+              const dur = t.duracao_ms != null ? `${(t.duracao_ms / 1000).toFixed(1)}s` : "—";
+              const corStatus = t.sucesso
+                ? t.degradado
+                  ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                  : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                : "bg-destructive/15 text-destructive";
+              const rotuloStatus = t.sucesso ? (t.degradado ? "Fallback" : "Sucesso") : "Falha";
+              return (
+                <li key={t.id as string} className="space-y-1 px-4 py-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 font-medium ${corStatus}`}>
+                      {rotuloStatus}
+                    </span>
+                    <span className="font-mono text-muted-foreground">#{t.tentativa as number}</span>
+                    {t.degradado_codigo && (
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        {t.degradado_codigo as string}
+                      </span>
+                    )}
+                    {t.http_status != null && (
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        HTTP {t.http_status as number}
+                      </span>
+                    )}
+                    <span className="ml-auto text-muted-foreground">{dur} · {quando}</span>
+                  </div>
+                  {(t.degradado_detalhe || t.erro_mensagem) && (
+                    <p className="break-words text-muted-foreground">
+                      {(t.degradado_detalhe ?? t.erro_mensagem) as string}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
+
       <Section icon={AlertTriangle} title="Problemas detectados">
         {(a.problemas_detectados ?? []).length === 0 ? (
           <Empty>Nenhum problema crítico</Empty>
