@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Search, X } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
@@ -20,7 +21,18 @@ const dashboardSearchSchema = z.object({
     "todos",
   ).default("todos"),
   q: fallback(z.string(), "").default(""),
+  ordem: fallback(
+    z.enum(["recentes", "antigos", "criadas"]),
+    "recentes",
+  ).default("recentes"),
 });
+
+type Ordem = "recentes" | "antigos" | "criadas";
+const ORDEM_CONFIG: Record<Ordem, { coluna: "data_inspecao" | "created_at"; ascending: boolean; label: string }> = {
+  recentes: { coluna: "data_inspecao", ascending: false, label: "Mais recentes" },
+  antigos: { coluna: "data_inspecao", ascending: true, label: "Mais antigas" },
+  criadas: { coluna: "created_at", ascending: false, label: "Criadas recentemente" },
+};
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: zodValidator(dashboardSearchSchema),
@@ -35,14 +47,18 @@ const FILTROS: { id: Filtro; label: string }[] = [
 ];
 
 function Dashboard() {
-  const { filtro, q } = Route.useSearch();
+  const { filtro, q, ordem } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
   usePersistedFilter("dashboard:filtro", filtro, "todos", "/dashboard");
+  type DashSearch = { filtro: Filtro; q: string; ordem: Ordem };
   const setFiltro = (f: Filtro) =>
-    navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, filtro: f }), replace: true });
+    navigate({ search: (prev: DashSearch) => ({ ...prev, filtro: f }), replace: true });
   const setQ = (v: string) =>
-    navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, q: v }), replace: true });
+    navigate({ search: (prev: DashSearch) => ({ ...prev, q: v }), replace: true });
+  const setOrdem = (o: Ordem) =>
+    navigate({ search: (prev: DashSearch) => ({ ...prev, ordem: o }), replace: true });
   const PAGE_SIZE = 10;
+  const ordemCfg = ORDEM_CONFIG[ordem as Ordem];
   const {
     data: inspecoesPages,
     fetchNextPage,
@@ -50,7 +66,7 @@ function Dashboard() {
     isFetchingNextPage,
     isLoading: isLoadingInspecoes,
   } = useInfiniteQuery({
-    queryKey: ["dash-inspecoes"],
+    queryKey: ["dash-inspecoes", ordem],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       const from = (pageParam as number) * PAGE_SIZE;
@@ -60,7 +76,7 @@ function Dashboard() {
         .select(
           "id, status_geral, status_processo, data_inspecao, setor:setor_id(codigo), canteiro:canteiro_id(nome), propriedade:propriedade_id(nome, produtor:produtor_id(nome))",
         )
-        .order("created_at", { ascending: false })
+        .order(ordemCfg.coluna, { ascending: ordemCfg.ascending })
         .range(from, to);
       return data ?? [];
     },
@@ -68,6 +84,23 @@ function Dashboard() {
       lastPage.length < PAGE_SIZE ? undefined : allPages.length,
   });
   const inspecoes = (inspecoesPages?.pages ?? []).flat();
+
+  // Auto-load ao rolar até o sentinel
+  const sentinelaRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelaRef.current;
+    if (!el || !hasNextPage) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
   // Contagem agregada por status_processo considerando TODAS as inspeções
   // da organização (RLS já restringe), não apenas as últimas 20.
   const { data: statusTotais } = useQuery({
@@ -180,9 +213,21 @@ function Dashboard() {
         </div>
       </div>
 
-      <h3 className="mt-5 mb-2 text-sm font-semibold">
-        Últimas inspeções{filtro !== "todos" ? ` · ${FILTROS.find((f) => f.id === filtro)?.label}` : ""}
-      </h3>
+      <div className="mt-5 mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">
+          Últimas inspeções{filtro !== "todos" ? ` · ${FILTROS.find((f) => f.id === filtro)?.label}` : ""}
+        </h3>
+        <select
+          value={ordem}
+          onChange={(e) => setOrdem(e.target.value as Ordem)}
+          aria-label="Ordenar por"
+          className="h-8 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground outline-none focus:border-primary"
+        >
+          {(Object.keys(ORDEM_CONFIG) as Ordem[]).map((o) => (
+            <option key={o} value={o}>{ORDEM_CONFIG[o].label}</option>
+          ))}
+        </select>
+      </div>
       <div className="space-y-2">
         {inspecoesFiltradas.length === 0 && (
           <p className="text-sm text-muted-foreground">Nenhuma inspeção neste filtro.</p>
@@ -204,7 +249,7 @@ function Dashboard() {
           </div>
         ))}
       </div>
-      <div className="mt-3 flex justify-center">
+      <div ref={sentinelaRef} className="mt-3 flex justify-center">
         {hasNextPage ? (
           <button
             type="button"
