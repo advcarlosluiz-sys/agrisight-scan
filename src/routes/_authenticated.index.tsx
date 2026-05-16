@@ -10,7 +10,8 @@ import {
   LayoutDashboard,
   Loader2,
 } from "lucide-react";
-import { syncNow } from "@/lib/sync-queue";
+import { syncNow, cancelSync } from "@/lib/sync-queue";
+import { usePendingPhotos, useSyncQueueState } from "@/lib/use-sync-queue";
 import { AppShell } from "@/components/app-shell";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useQuery } from "@tanstack/react-query";
