@@ -508,7 +508,13 @@ function AnalisandoPage() {
         )}
       </div>
 
-      <AlertDialog open={confirmarCancelar} onOpenChange={setConfirmarCancelar}>
+      <AlertDialog
+        open={confirmarCancelar}
+        onOpenChange={(open) => {
+          setConfirmarCancelar(open);
+          if (!open) setMotivoCancelamento("");
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancelar análise em andamento?</AlertDialogTitle>
@@ -518,12 +524,30 @@ function AnalisandoPage() {
               iniciar a análise novamente quando quiser.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="motivo-cancelamento" className="text-sm">
+              Motivo do cancelamento <span className="text-muted-foreground">(opcional)</span>
+            </Label>
+            <Textarea
+              id="motivo-cancelamento"
+              value={motivoCancelamento}
+              onChange={(e) => setMotivoCancelamento(e.target.value)}
+              placeholder="Ex.: fotos com baixa qualidade, escolhi o setor errado, conexão instável..."
+              rows={3}
+              maxLength={500}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Esse motivo fica registrado para você revisar depois.
+            </p>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Continuar análise</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
+                const m = motivoCancelamento;
                 setConfirmarCancelar(false);
-                void cancelar();
+                setMotivoCancelamento("");
+                void cancelar(m);
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
