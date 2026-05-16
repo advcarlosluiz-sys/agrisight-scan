@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   ClipboardList,
   PlayCircle,
@@ -6,7 +8,9 @@ import {
   CloudUpload,
   Settings,
   LayoutDashboard,
+  Loader2,
 } from "lucide-react";
+import { syncNow } from "@/lib/sync-queue";
 import { AppShell } from "@/components/app-shell";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useQuery } from "@tanstack/react-query";
@@ -106,23 +110,68 @@ function HomePage() {
             </div>
           </Link>
         ))}
-        <Link
-          to="/sincronizacao"
-          className="flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-card transition active:scale-[0.99]"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary">
-            <CloudUpload className="h-6 w-6" />
-          </div>
-          <div className="flex-1 text-left">
-            <div className="font-semibold">Sincronização</div>
-            <div className="text-xs text-muted-foreground">
-              {pendentesFila.length === 0
-                ? "Tudo enviado"
-                : `${pendentesFila.length} pendente${pendentesFila.length > 1 ? "s" : ""} na fila`}
-            </div>
-          </div>
-        </Link>
+        <SyncCard offline={offline} pendentes={pendentesFila.length} />
       </div>
     </AppShell>
+  );
+}
+
+function SyncCard({ offline, pendentes }: { offline: boolean; pendentes: number }) {
+  const [running, setRunning] = useState(false);
+  const handleSync = async () => {
+    if (offline) {
+      toast.error("Você está offline", {
+        description: "Reconecte-se para enviar os dados pendentes.",
+      });
+      return;
+    }
+    if (pendentes === 0) {
+      toast.info("Nada para sincronizar", { description: "Tudo já está enviado." });
+      return;
+    }
+    setRunning(true);
+    await toast.promise(syncNow(), {
+      loading: `Enviando ${pendentes} item${pendentes > 1 ? "s" : ""}…`,
+      success: (r) => {
+        if (r.falhas === 0 && r.restantes === 0) {
+          return `${r.enviados} item${r.enviados !== 1 ? "s" : ""} sincronizado${r.enviados !== 1 ? "s" : ""} com sucesso`;
+        }
+        return {
+          message: `${r.enviados} enviado${r.enviados !== 1 ? "s" : ""}, ${r.falhas} com falha`,
+          description: r.restantes > 0 ? `${r.restantes} ainda na fila — tentaremos novamente em segundos.` : undefined,
+        } as unknown as string;
+      },
+      error: (e: unknown) => (e instanceof Error ? e.message : "Falha ao sincronizar"),
+    }).unwrap?.().catch(() => undefined);
+    setRunning(false);
+  };
+
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-card">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary">
+        {running ? <Loader2 className="h-6 w-6 animate-spin" /> : <CloudUpload className="h-6 w-6" />}
+      </div>
+      <div className="flex-1 text-left">
+        <div className="font-semibold">Sincronizar Dados</div>
+        <div className="text-xs text-muted-foreground">
+          {pendentes === 0
+            ? "Tudo enviado"
+            : `${pendentes} pendente${pendentes > 1 ? "s" : ""} na fila`}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1">
+        <button
+          type="button"
+          onClick={handleSync}
+          disabled={running || offline || pendentes === 0}
+          className="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {running ? "Enviando…" : "Sincronizar"}
+        </button>
+        <Link to="/sincronizacao" className="text-[11px] text-muted-foreground underline underline-offset-2">
+          Ver fila
+        </Link>
+      </div>
+    </div>
   );
 }
