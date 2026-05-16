@@ -53,6 +53,7 @@ function Dashboard() {
   const { filtro, q, ordem } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
   usePersistedFilter("status-processo:filtro", filtro, "todos", "/dashboard");
+  useInvalidFiltroToast(FILTRO_VALORES);
   type DashSearch = { filtro: Filtro; q: string; ordem: Ordem };
   const setFiltro = (f: Filtro) =>
     navigate({ search: (prev: DashSearch) => ({ ...prev, filtro: f }), replace: true });
