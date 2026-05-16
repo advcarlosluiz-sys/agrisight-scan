@@ -65,18 +65,23 @@ function ResultadoPage() {
       ).data,
   });
 
-  // Total de fotos enviadas para esta inspeção — usado para mostrar
-  // quantas a IA conseguiu efetivamente analisar (total - falhadas).
-  const { data: totalFotos } = useQuery({
-    queryKey: ["fotos-count", id],
+  // Resumo das fotos enviadas para esta inspeção — usado para mostrar quantas
+  // a IA analisou (total - falhadas) e quais tipos de cobertura ainda faltam.
+  const { data: fotosResumo } = useQuery({
+    queryKey: ["fotos-resumo", id],
     queryFn: async () => {
-      const { count } = await supabase
+      const { data } = await supabase
         .from("fotos_inspecao")
-        .select("id", { count: "exact", head: true })
+        .select("tipo_foto")
         .eq("inspecao_id", id);
-      return count ?? 0;
+      const rows = (data ?? []) as { tipo_foto: TipoFoto }[];
+      return {
+        total: rows.length,
+        tipos: new Set(rows.map((r) => r.tipo_foto)),
+      };
     },
   });
+  const totalFotos = fotosResumo?.total ?? 0;
 
   const tarefasQK = ["tarefas-inspecao", id] as const;
   const { data: tarefas, isLoading: tarefasLoading } = useQuery({
