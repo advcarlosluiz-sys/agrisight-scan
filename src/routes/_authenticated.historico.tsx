@@ -17,6 +17,7 @@ const historicoSearchSchema = z.object({
     z.enum(["todos", "em_andamento", "analisando", "concluida", "cancelada"]),
     "todos",
   ).default("todos"),
+  q: fallback(z.string(), "").default(""),
 });
 
 export const Route = createFileRoute("/_authenticated/historico")({
@@ -33,11 +34,13 @@ const FILTROS: { id: Filtro; label: string }[] = [
 ];
 
 function HistoricoPage() {
-  const { filtro } = Route.useSearch();
+  const { filtro, q } = Route.useSearch();
   const navigate = useNavigate({ from: "/historico" });
   usePersistedFilter("historico:filtro", filtro, "todos", "/historico");
   const setFiltro = (f: Filtro) =>
-    navigate({ search: { filtro: f }, replace: true });
+    navigate({ search: (prev) => ({ ...prev, filtro: f }), replace: true });
+  const setQ = (v: string) =>
+    navigate({ search: (prev) => ({ ...prev, q: v }), replace: true });
 
   const { data } = useQuery({
     queryKey: ["historico"],
@@ -46,21 +49,34 @@ function HistoricoPage() {
         await supabase
           .from("inspecoes")
           .select(
-            "id, data_inspecao, status_geral, status_processo, setor:setor_id(codigo), canteiro:canteiro_id(nome)",
+            "id, data_inspecao, status_geral, status_processo, setor:setor_id(codigo), canteiro:canteiro_id(nome), propriedade:propriedade_id(nome, produtor:produtor_id(nome))",
           )
           .order("created_at", { ascending: false })
           .limit(50)
       ).data ?? [],
   });
 
-  const lista = (data ?? []).filter((i) =>
+  const termo = q.trim().toLowerCase();
+  const matchBusca = (i: any) => {
+    if (!termo) return true;
+    const alvo = [
+      i.canteiro?.nome,
+      i.propriedade?.nome,
+      i.propriedade?.produtor?.nome,
+      i.setor?.codigo,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return alvo.includes(termo);
+  };
+
+  const baseFiltrada = (data ?? []).filter(matchBusca);
+  const lista = baseFiltrada.filter((i) =>
     filtro === "todos" ? true : (i as { status_processo?: string }).status_processo === filtro,
   );
 
   const contar = (f: Filtro) =>
     f === "todos"
-      ? data?.length ?? 0
-      : (data ?? []).filter((i) => (i as { status_processo?: string }).status_processo === f).length;
+      ? baseFiltrada.length
+      : baseFiltrada.filter((i) => (i as { status_processo?: string }).status_processo === f).length;
 
   return (
     <AppShell title="Histórico" back="/">
