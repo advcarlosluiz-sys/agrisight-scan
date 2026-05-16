@@ -85,6 +85,11 @@ function ObsPage() {
         .eq("id", id);
       if (uErr) throw uErr;
 
+      try {
+        localStorage.removeItem(`analise-cancelada:${id}`);
+      } catch {
+        // ignora
+      }
       navigate({ to: "/inspecao/$id/analisando", params: { id } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");
