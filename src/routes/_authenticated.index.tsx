@@ -8,9 +8,11 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { ConnectionBanner } from "@/components/connection-banner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePendingPhotos } from "@/lib/use-sync-queue";
+import { useConnection } from "@/lib/use-online";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: HomePage,
@@ -18,6 +20,8 @@ export const Route = createFileRoute("/_authenticated/")({
 
 function HomePage() {
   const pendentesFila = usePendingPhotos();
+  const { status } = useConnection();
+  const offline = status === "offline";
   const { data: pendente } = useQuery({
     queryKey: ["pendente"],
     queryFn: async () => {
@@ -29,10 +33,19 @@ function HomePage() {
         .limit(1);
       return data?.[0] ?? null;
     },
+    enabled: !offline,
   });
 
   const items = [
-    { to: "/inspecao/nova", params: undefined, icon: PlayCircle, label: "Nova Inspeção", primary: true, sub: undefined as string | undefined },
+    {
+      to: "/inspecao/nova",
+      params: undefined,
+      icon: PlayCircle,
+      label: "Nova Inspeção",
+      primary: true,
+      sub: offline ? "Disponível offline" : undefined,
+      disabled: false,
+    },
     {
       to: pendente ? "/inspecao/$id/observacoes" : "/historico",
       params: pendente ? { id: pendente.id } : undefined,
@@ -41,13 +54,35 @@ function HomePage() {
       disabled: !pendente,
       sub: pendente ? `Setor ${(pendente as any).setor?.codigo ?? "—"}` : "Nenhuma pendente",
     },
-    { to: "/historico", params: undefined, icon: History, label: "Histórico", sub: undefined as string | undefined },
-    { to: "/dashboard", params: undefined, icon: LayoutDashboard, label: "Dashboard", sub: undefined as string | undefined },
-    { to: "/configuracoes", params: undefined, icon: Settings, label: "Configurações", sub: undefined as string | undefined },
+    {
+      to: "/historico",
+      params: undefined,
+      icon: History,
+      label: "Histórico",
+      sub: offline ? "Requer conexão" : undefined,
+      disabled: offline,
+    },
+    {
+      to: "/dashboard",
+      params: undefined,
+      icon: LayoutDashboard,
+      label: "Dashboard",
+      sub: offline ? "Requer conexão" : undefined,
+      disabled: offline,
+    },
+    {
+      to: "/configuracoes",
+      params: undefined,
+      icon: Settings,
+      label: "Configurações",
+      sub: undefined as string | undefined,
+      disabled: false,
+    },
   ];
 
   return (
     <AppShell title="Agrobotic Scout AI">
+      <ConnectionBanner />
       <div className="mb-4 rounded-2xl bg-gradient-to-br from-primary to-primary/85 p-5 text-primary-foreground shadow-elevated">
         <p className="text-xs uppercase tracking-wider opacity-80">Bem-vindo</p>
         <h2 className="text-xl font-semibold">Pronto para inspecionar o campo?</h2>
