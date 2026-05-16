@@ -30,9 +30,13 @@ function AnalisandoPage() {
   const [progresso, setProgresso] = useState(8);
   const [etapa, setEtapa] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
+  const [fotos, setFotos] = useState<FotoItem[]>([]);
   const ranRef = useRef(false);
   const canceladoRef = useRef(false);
   const statusProcesso = useStatusProcesso(id);
+
+  const marcarStatus = (fotoId: string, status: FotoStatus) =>
+    setFotos((prev) => prev.map((f) => (f.id === fotoId ? { ...f, status } : f)));
 
   useEffect(() => {
     if (ranRef.current) return;
