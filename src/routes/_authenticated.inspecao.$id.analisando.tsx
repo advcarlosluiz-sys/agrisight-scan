@@ -210,8 +210,10 @@ function AnalisandoPage() {
       // marcando cada uma como "carregada" assim que sua URL fica disponível.
       const { data: fotosRows, error: fotosErr } = await supabase
         .from("fotos_inspecao")
-        .select("id, legenda, storage_path, created_at")
+        .select("id, legenda, storage_path, created_at, ordem, tipo_foto")
         .eq("inspecao_id", id)
+        .order("tipo_foto", { ascending: true })
+        .order("ordem", { ascending: true })
         .order("created_at", { ascending: true });
       if (fotosErr) throw fotosErr;
       if (!fotosRows || fotosRows.length < 1) {

@@ -99,8 +99,11 @@ Deno.serve(async (req) => {
     // 2. Buscar fotos (não bloqueia se falhar)
     const { data: fotos, error: fotosErr } = await supabase
       .from("fotos_inspecao")
-      .select("tipo_foto, storage_path")
-      .eq("inspecao_id", inspecao_id);
+      .select("tipo_foto, storage_path, ordem, created_at")
+      .eq("inspecao_id", inspecao_id)
+      .order("tipo_foto", { ascending: true })
+      .order("ordem", { ascending: true })
+      .order("created_at", { ascending: true });
 
     if (fotosErr) console.error("Erro ao listar fotos (seguindo sem):", fotosErr);
 

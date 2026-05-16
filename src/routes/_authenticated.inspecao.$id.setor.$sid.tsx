@@ -8,11 +8,29 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Camera, Loader2, Plus, Trash2, CheckCircle2, AlertCircle, X, CloudOff, RefreshCw } from "lucide-react";
+import { Camera, Loader2, Plus, Trash2, CheckCircle2, AlertCircle, X, CloudOff, RefreshCw, GripVertical } from "lucide-react";
 import { useOnlineStatus } from "@/lib/use-online";
 import { enqueuePhoto, retryPendingPhoto, scheduleProcess } from "@/lib/sync-queue";
 import { usePendingPhotos } from "@/lib/use-sync-queue";
 import { deletePendingPhoto } from "@/lib/sync-queue";
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const TIPOS = [
   { key: "geral", label: "Geral" },
@@ -28,7 +46,7 @@ const TIPOS = [
 const MAX_POR_TIPO = 8;
 
 type TipoKey = (typeof TIPOS)[number]["key"];
-type FotoRow = { id: string; tipo_foto: TipoKey; storage_path: string };
+type FotoRow = { id: string; tipo_foto: TipoKey; storage_path: string; ordem: number };
 type UploadStatus = "enviando" | "concluido" | "erro";
 type UploadItem = {
   id: string;
@@ -71,10 +89,23 @@ function ColetaPage() {
     queryFn: async (): Promise<FotoRow[]> =>
       (((await supabase
         .from("fotos_inspecao")
-        .select("id, tipo_foto, storage_path")
+        .select("id, tipo_foto, storage_path, ordem")
         .eq("inspecao_id", id)
+        .order("ordem", { ascending: true })
         .order("created_at", { ascending: true })).data ?? []) as FotoRow[]),
   });
+
+  // Estado local de ordem por tipo — atualizado otimisticamente no drag-end
+  // e ressincronizado quando a lista do servidor muda.
+  const [ordemLocal, setOrdemLocal] = useState<Record<TipoKey, string[]>>({} as Record<TipoKey, string[]>);
+  useEffect(() => {
+    if (!fotos) return;
+    const novo: Record<string, string[]> = {};
+    for (const t of TIPOS) {
+      novo[t.key] = fotos.filter((f) => f.tipo_foto === t.key).map((f) => f.id);
+    }
+    setOrdemLocal(novo as Record<TipoKey, string[]>);
+  }, [fotos]);
 
   // Signed URLs por foto.id
   useEffect(() => {
@@ -94,7 +125,46 @@ function ColetaPage() {
     };
   }, [fotos]);
 
-  const fotosPorTipo = (tipo: TipoKey) => (fotos ?? []).filter((f) => f.tipo_foto === tipo);
+  const fotosPorTipo = (tipo: TipoKey): FotoRow[] => {
+    const all = (fotos ?? []).filter((f) => f.tipo_foto === tipo);
+    const ordens = ordemLocal[tipo];
+    if (!ordens || ordens.length === 0) return all;
+    const byId = new Map(all.map((f) => [f.id, f] as const));
+    const reordered = ordens.map((fid) => byId.get(fid)).filter(Boolean) as FotoRow[];
+    // Inclui qualquer foto que apareceu depois (ex.: novo upload) ao final.
+    for (const f of all) if (!ordens.includes(f.id)) reordered.push(f);
+    return reordered;
+  };
+
+  // Sensores de DnD — pointer (mouse), toque (mobile) e teclado (acessibilidade).
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = async (tipo: TipoKey, e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const atual = fotosPorTipo(tipo).map((f) => f.id);
+    const from = atual.indexOf(active.id as string);
+    const to = atual.indexOf(over.id as string);
+    if (from < 0 || to < 0) return;
+    const novaOrdem = arrayMove(atual, from, to);
+    // Otimista
+    setOrdemLocal((prev) => ({ ...prev, [tipo]: novaOrdem }));
+    // Persiste — uma atualização por foto. Falhas mostram toast e revertem.
+    try {
+      await Promise.all(
+        novaOrdem.map((fid, idx) =>
+          supabase.from("fotos_inspecao").update({ ordem: idx }).eq("id", fid),
+        ),
+      );
+    } catch (err) {
+      toast.error("Não foi possível salvar a nova ordem");
+      setOrdemLocal((prev) => ({ ...prev, [tipo]: atual }));
+    }
+  };
 
   // Conta tudo que já "ocupa vaga" para o tipo: salvas + em upload ativo + na fila offline.
   const ocupadasPorTipo = (tipo: TipoKey) =>
@@ -157,11 +227,14 @@ function ColetaPage() {
       });
       if (error) throw error;
       updateUpload(uid, { progresso: 75 });
+      // Próxima posição da ordem para este tipo = (maior ordem atual) + 1
+      const maxOrdem = fotosPorTipo(tipo).reduce((m, f) => Math.max(m, f.ordem ?? 0), -1);
       const { error: insErr } = await supabase.from("fotos_inspecao").insert({
         organizacao_id: orgRes.data!,
         inspecao_id: id,
         tipo_foto: tipo,
         storage_path: path,
+        ordem: maxOrdem + 1,
       });
       if (insErr) throw insErr;
       updateUpload(uid, { status: "concluido", progresso: 100 });
@@ -416,48 +489,43 @@ function ColetaPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-2">
-                {lista.map((f) => {
-                  const url = previews[f.id];
-                  return (
-                    <div
-                      key={f.id}
-                      className="relative aspect-square overflow-hidden rounded-xl border bg-muted"
-                    >
-                      {url ? (
-                        <img
-                          src={url}
-                          alt={`Foto ${t.label}`}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        </div>
-                      )}
+              {lista.length > 1 && (
+                <p className="mb-1 text-[10px] text-muted-foreground">
+                  Arraste pelas alças para reordenar — a ordem é usada no envio à IA.
+                </p>
+              )}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(e) => void handleDragEnd(t.key, e)}
+              >
+                <SortableContext items={lista.map((f) => f.id)} strategy={rectSortingStrategy}>
+                  <div className="grid grid-cols-3 gap-2">
+                    {lista.map((f, idx) => (
+                      <SortablePhoto
+                        key={f.id}
+                        foto={f}
+                        url={previews[f.id]}
+                        label={t.label}
+                        posicao={idx + 1}
+                        canDrag={lista.length > 1}
+                        onRemove={() => remover(f)}
+                      />
+                    ))}
+
+                    {!noLimite && (
                       <button
                         type="button"
-                        onClick={() => remover(f)}
-                        aria-label="Remover foto"
-                        className="absolute right-1 top-1 rounded-full bg-destructive/90 p-1 text-destructive-foreground shadow-sm hover:bg-destructive"
+                        onClick={() => triggerInput(t.key)}
+                        className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Plus className="h-5 w-5" />
+                        <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
                       </button>
-                    </div>
-                  );
-                })}
-
-                {!noLimite && (
-                  <button
-                    type="button"
-                    onClick={() => triggerInput(t.key)}
-                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
-                  >
-                    <Plus className="h-5 w-5" />
-                    <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
-                  </button>
-                )}
-              </div>
+                    )}
+                  </div>
+                </SortableContext>
+              </DndContext>
 
               <input
                 ref={(el) => {
@@ -512,6 +580,70 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
       {children}
+    </div>
+  );
+}
+
+function SortablePhoto({
+  foto,
+  url,
+  label,
+  posicao,
+  canDrag,
+  onRemove,
+}: {
+  foto: FotoRow;
+  url: string | undefined;
+  label: string;
+  posicao: number;
+  canDrag: boolean;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: foto.id,
+    disabled: !canDrag,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.85 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="relative aspect-square overflow-hidden rounded-xl border bg-muted touch-none"
+    >
+      {url ? (
+        <img src={url} alt={`Foto ${label}`} className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      <span className="absolute left-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+        {posicao}
+      </span>
+      {canDrag && (
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          aria-label="Arrastar para reordenar"
+          className="absolute bottom-1 left-1 cursor-grab rounded-full bg-black/60 p-1 text-white shadow-sm hover:bg-black/80 active:cursor-grabbing"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Remover foto"
+        className="absolute right-1 top-1 rounded-full bg-destructive/90 p-1 text-destructive-foreground shadow-sm hover:bg-destructive"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
