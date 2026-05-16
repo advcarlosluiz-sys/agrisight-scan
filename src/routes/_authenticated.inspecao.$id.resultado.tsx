@@ -95,6 +95,23 @@ function ResultadoPage() {
   });
   const totalFotos = fotosResumo?.total ?? 0;
 
+  // Histórico de tentativas de análise (sucessos, falhas e fallbacks)
+  // — usado para diagnosticar instabilidade da IA ao longo do tempo.
+  const { data: tentativasIA } = useQuery({
+    queryKey: ["tentativas-analise-ia", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tentativas_analise_ia")
+        .select(
+          "id, tentativa, sucesso, degradado, degradado_codigo, degradado_detalhe, http_status, duracao_ms, erro_mensagem, created_at",
+        )
+        .eq("inspecao_id", id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      return data ?? [];
+    },
+  });
+
   const tarefasQK = ["tarefas-inspecao", id] as const;
   const { data: tarefas, isLoading: tarefasLoading } = useQuery({
     queryKey: tarefasQK,
