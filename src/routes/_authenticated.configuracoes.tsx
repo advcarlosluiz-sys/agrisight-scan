@@ -350,3 +350,84 @@ function PermRow({
     </div>
   );
 }
+
+function AgronomoSection({
+  orgId,
+  org,
+  canEdit,
+  onSaved,
+}: {
+  orgId?: string;
+  org?: { agronomo_nome?: string | null; agronomo_email?: string | null; agronomo_telefone?: string | null } | null;
+  canEdit: boolean;
+  onSaved: () => void;
+}) {
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [tel, setTel] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setNome(org?.agronomo_nome ?? "");
+    setEmail(org?.agronomo_email ?? "");
+    setTel(org?.agronomo_telefone ?? "");
+  }, [org?.agronomo_nome, org?.agronomo_email, org?.agronomo_telefone]);
+
+  const salvar = async () => {
+    if (!orgId) return;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("E-mail inválido");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from("organizacoes")
+      .update({
+        agronomo_nome: nome.trim() || null,
+        agronomo_email: email.trim() || null,
+        agronomo_telefone: tel.trim() || null,
+      })
+      .eq("id", orgId);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Agrônomo padrão salvo");
+      onSaved();
+    }
+  };
+
+  return (
+    <section className="mt-4 rounded-2xl border bg-card p-4 shadow-card">
+      <div className="flex items-center gap-2">
+        <UserCheck className="h-4 w-4 text-primary" />
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Agrônomo padrão
+        </p>
+      </div>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        Solicitações abertas nas análises de IA são direcionadas para este contato.
+      </p>
+      <div className="mt-3 space-y-2">
+        <div>
+          <Label className="text-xs">Nome</Label>
+          <Input value={nome} onChange={(e) => setNome(e.target.value)} disabled={!canEdit} maxLength={120} />
+        </div>
+        <div>
+          <Label className="text-xs">E-mail</Label>
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!canEdit} maxLength={160} />
+        </div>
+        <div>
+          <Label className="text-xs">Telefone</Label>
+          <Input value={tel} onChange={(e) => setTel(e.target.value)} disabled={!canEdit} maxLength={40} />
+        </div>
+      </div>
+      {canEdit ? (
+        <Button className="mt-3 w-full" onClick={salvar} disabled={saving || !orgId}>
+          {saving ? "Salvando..." : "Salvar"}
+        </Button>
+      ) : (
+        <p className="mt-3 text-[11px] text-muted-foreground">Apenas administradores podem alterar.</p>
+      )}
+    </section>
+  );
+}
