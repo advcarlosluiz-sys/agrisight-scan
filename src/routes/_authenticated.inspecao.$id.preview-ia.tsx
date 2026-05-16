@@ -43,6 +43,8 @@ interface Analise {
 interface PreviewPayload {
   preview: Analise;
   degradado: string | null;
+  degradado_codigo?: string | null;
+  degradado_detalhe?: string | null;
   fotos: { total: number; usadas: number; falhadas: number } | null;
   ts: number;
 }
