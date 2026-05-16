@@ -27,6 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { StatusProcessoBadge, useStatusProcesso, useSyncStatusRoute } from "@/components/status-processo-badge";
 
 type FotoStatus = "pendente" | "carregada" | "enviada";
