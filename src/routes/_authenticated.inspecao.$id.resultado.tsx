@@ -282,3 +282,165 @@ function Info({ label, children }: { label: string; children: React.ReactNode })
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-muted-foreground">{children}</p>;
 }
+
+function SolicitacaoAgronomo({ inspecaoId, analise }: { inspecaoId: string; analise: any }) {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  const { data: perfil } = useQuery({
+    queryKey: ["perfil-org-agronomo", user?.id],
+    enabled: !!user,
+    queryFn: async () =>
+      (
+        await supabase
+          .from("perfis")
+          .select("organizacao_id, organizacao:organizacao_id(id, agronomo_nome, agronomo_email, agronomo_telefone)")
+          .eq("id", user!.id)
+          .single()
+      ).data as any,
+  });
+  const org = perfil?.organizacao;
+  const orgId = perfil?.organizacao_id;
+
+  const { data: existente } = useQuery({
+    queryKey: ["solic-da-inspecao", inspecaoId],
+    queryFn: async () =>
+      (
+        await supabase
+          .from("solicitacoes_agronomo")
+          .select("id, status, prioridade, created_at, agronomo_nome, atendida_em")
+          .eq("inspecao_id", inspecaoId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      ).data as any,
+  });
+
+  const [aberto, setAberto] = useState(false);
+  const [prio, setPrio] = useState<"alta" | "media" | "baixa">(
+    (analise?.prioridade as any) ?? (analise?.risco === "alto" ? "alta" : analise?.risco === "medio" ? "media" : "media"),
+  );
+  const [obs, setObs] = useState("");
+
+  const criar = useMutation({
+    mutationFn: async () => {
+      if (!orgId) throw new Error("Organização não carregada");
+      const { data, error } = await supabase
+        .from("solicitacoes_agronomo")
+        .insert({
+          organizacao_id: orgId,
+          inspecao_id: inspecaoId,
+          analise_id: analise?.id ?? null,
+          prioridade: prio,
+          observacao: obs.trim() || null,
+          problemas: analise?.problemas_detectados ?? [],
+          acoes: analise?.acoes_recomendadas ?? [],
+          agronomo_nome: org?.agronomo_nome ?? null,
+          agronomo_email: org?.agronomo_email ?? null,
+          agronomo_telefone: org?.agronomo_telefone ?? null,
+          criado_por: user?.id ?? null,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success(
+        org?.agronomo_nome
+          ? `Solicitação enviada para ${org.agronomo_nome}`
+          : "Solicitação registrada",
+      );
+      setAberto(false);
+      setObs("");
+      qc.invalidateQueries({ queryKey: ["solic-da-inspecao", inspecaoId] });
+      qc.invalidateQueries({ queryKey: ["solicitacoes"] });
+      qc.invalidateQueries({ queryKey: ["solic-pendentes"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao registrar"),
+  });
+
+  const necessidade = !!analise?.necessidade_agronomo;
+  const jaAberta = existente && (existente.status === "pendente" || existente.status === "visualizada");
+
+  return (
+    <div className="mt-4 rounded-2xl border bg-card p-4">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+        <UserCheck className="h-4 w-4 text-primary" /> Necessidade de agrônomo
+      </div>
+      <p className="text-sm">
+        {necessidade ? "Sim — recomendamos visita técnica." : "Não há indicação automática, mas você pode solicitar."}
+      </p>
+
+      {existente && (
+        <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs">
+          <p className="font-medium">
+            Última solicitação: <span className="capitalize">{existente.status}</span>{" "}
+            <span className="rounded-full bg-background px-2 py-0.5 uppercase">{existente.prioridade}</span>
+          </p>
+          <p className="text-muted-foreground">
+            {new Date(existente.created_at).toLocaleString("pt-BR")}
+            {existente.agronomo_nome ? ` · para ${existente.agronomo_nome}` : ""}
+          </p>
+          <Link to="/solicitacoes" className="mt-1 inline-block text-primary underline">
+            Ver na central de solicitações
+          </Link>
+        </div>
+      )}
+
+      {!org?.agronomo_nome && (
+        <p className="mt-3 rounded-lg bg-yellow-500/10 p-2 text-[11px] text-yellow-800 dark:text-yellow-300">
+          Cadastre o agrônomo padrão em <Link to="/configuracoes" className="underline">Configurações</Link> para
+          direcionar automaticamente as solicitações.
+        </p>
+      )}
+
+      {!aberto ? (
+        <Button
+          className="mt-3 w-full"
+          variant={jaAberta ? "outline" : "default"}
+          onClick={() => setAberto(true)}
+        >
+          {jaAberta ? (
+            <><CheckCircle2 className="mr-2 h-4 w-4" /> Abrir nova solicitação</>
+          ) : (
+            <><BellPlus className="mr-2 h-4 w-4" /> Solicitar agrônomo</>
+          )}
+        </Button>
+      ) : (
+        <div className="mt-3 space-y-3 rounded-lg border bg-background/60 p-3">
+          <div>
+            <label className="text-xs font-medium">Prioridade</label>
+            <Select value={prio} onValueChange={(v) => setPrio(v as any)}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="media">Média</SelectItem>
+                <SelectItem value="baixa">Baixa</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs font-medium">Observação (opcional)</label>
+            <Textarea
+              value={obs}
+              onChange={(e) => setObs(e.target.value)}
+              placeholder="Detalhes para o agrônomo..."
+              rows={3}
+              maxLength={500}
+              className="mt-1"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" className="flex-1" onClick={() => setAberto(false)} disabled={criar.isPending}>
+              Cancelar
+            </Button>
+            <Button className="flex-1" onClick={() => criar.mutate()} disabled={criar.isPending || !orgId}>
+              {criar.isPending ? "Enviando..." : "Confirmar"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
