@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 
 const FEEDBACK_MS = 2000;
+const TOAST_MS = 8000;
 
 export function CopyFilterLinkButton({ className }: { className?: string }) {
   const [copied, setCopied] = useState(false);
