@@ -271,7 +271,14 @@ function AnalisandoPage() {
       try {
         sessionStorage.setItem(
           `preview-ia:${id}`,
-          JSON.stringify({ preview: resp.preview, degradado: resp.degradado ?? null, fotos: resp.fotos ?? null, ts: Date.now() }),
+          JSON.stringify({
+            preview: resp.preview,
+            degradado: resp.degradado ?? null,
+            degradado_codigo: resp.degradado_codigo ?? null,
+            degradado_detalhe: resp.degradado_detalhe ?? null,
+            fotos: resp.fotos ?? null,
+            ts: Date.now(),
+          }),
         );
       } catch {
         // ignora — preview ainda pode ser exibida via state se disponível
