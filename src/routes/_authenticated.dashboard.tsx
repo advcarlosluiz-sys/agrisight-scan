@@ -184,7 +184,7 @@ function Dashboard() {
         {inspecoesFiltradas.length === 0 && (
           <p className="text-sm text-muted-foreground">Nenhuma inspeção neste filtro.</p>
         )}
-        {inspecoesFiltradas.slice(0, 5).map((i: any) => (
+        {inspecoesFiltradas.map((i: any) => (
           <div key={i.id} className="rounded-xl border bg-card p-3">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -200,6 +200,22 @@ function Dashboard() {
             </div>
           </div>
         ))}
+      </div>
+      <div className="mt-3 flex justify-center">
+        {hasNextPage ? (
+          <button
+            type="button"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-card active:scale-[0.98] disabled:opacity-60"
+          >
+            {isFetchingNextPage ? "Carregando…" : "Carregar mais"}
+          </button>
+        ) : (
+          !isLoadingInspecoes && inspecoes.length > 0 && (
+            <p className="text-xs text-muted-foreground">Fim da lista</p>
+          )
+        )}
       </div>
 
       {tarefas && tarefas.length > 0 && (
