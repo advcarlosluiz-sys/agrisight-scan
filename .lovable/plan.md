@@ -1,64 +1,52 @@
 ## Objetivo
 
-Inserir uma etapa de **pré-visualização** entre a chamada da IA e a gravação no banco. Hoje a edge function `analisar-inspecao` faz tudo de uma vez: chama a IA, grava `analises_ia`, atualiza `inspecoes.status_geral`/`risco`/`status_processo`, atualiza `setores.status_atual` e cria `tarefas_recomendadas`. Vamos quebrar isso em **dois passos** controlados pelo usuário, com possibilidade de revisar/editar antes de confirmar.
+Impedir que uma inspeção sem fotos (ou com fotos pendentes de upload) seja enviada para a análise multimodal, mostrando avisos compreensíveis em vez de deixar a IA falhar/degradar silenciosamente.
 
-## Fluxo novo
+## Regras de validação (defaults propostos)
 
-```text
-observacoes → analisando (chama IA em modo "preview")
-            ↓
-       preview-ia (mostra JSON + permite editar status/risco/prioridade/confiança)
-            ├── "Salvar análise" → chama edge em modo "save" → resultado
-            └── "Descartar / Reanalisar" → volta para analisando
-```
+- **Mínimo obrigatório:** 1 foto persistida em `fotos_inspecao` para a inspeção. Sem isso, o botão "Salvar e Analisar com IA" fica desabilitado e a chamada da edge function é bloqueada.
+- **Recomendado:** 3 fotos no total **e** pelo menos 2 tipos distintos (`tipo_foto`). Se faltar, permite seguir mas exibe aviso amarelo ("análise pode ficar degradada").
+- **Fotos pendentes na fila offline** (`enqueuePhoto`/`usePendingPhotos`) NÃO contam como disponíveis. Se houver pendentes para a inspeção, bloqueia com mensagem "Sincronize X foto(s) pendente(s) antes de analisar" + atalho para `/sincronizacao`.
+- **Offline + 0 fotos sincronizadas:** bloqueio total ("Você está offline e nenhuma foto foi sincronizada ainda").
 
 ## Mudanças
 
-### 1. Edge function `supabase/functions/analisar-inspecao/index.ts`
+### 1. `src/lib/use-inspecao-fotos.ts` (novo)
+Hook `useInspecaoFotos(id)` que retorna:
+```
+{ total, porTipo: Record<TipoKey, number>, tiposDistintos, pendentes, loading }
+```
+- Lê `fotos_inspecao` via `useQuery` (`select tipo_foto, id where inspecao_id = id`).
+- Combina com `usePendingPhotos(id)` para contar pendentes.
+- Expõe helper `validarParaAnalise({ online })` retornando `{ ok: boolean, nivel: "bloqueio"|"aviso"|null, mensagem?: string, acao?: "sincronizar" }`.
 
-Adicionar parâmetro `mode` no body:
+### 2. `src/routes/_authenticated.inspecao.$id.observacoes.tsx`
+- Usa o hook acima.
+- Renderiza um card de status de fotos acima do botão: contagem total, tipos cobertos, pendentes.
+- Em caso de **bloqueio**: card vermelho com a mensagem, botão "Salvar e Analisar com IA" `disabled`, e (se for pendentes) link para Sincronização.
+- Em caso de **aviso**: card amarelo ("Recomendado X fotos / Y tipos para melhor resultado") mas botão habilitado.
+- `analisar()` revalida antes de chamar a edge function — se o estado mudou e virou bloqueio, exibe `toast.error` e aborta sem alterar `status_processo`.
 
-- `mode: "preview"` (padrão se não vier `analise`): executa passos 1–6 (busca inspeção, fotos, chama IA, normaliza, aplica fallback) e **retorna** `{ ok, preview, degradado, fotos }` **sem gravar nada**. Não muda `status_processo`.
-- `mode: "save"`: recebe `{ inspecao_id, analise }` (o JSON revisado pelo usuário, mesmo schema do `AnalysisResult`), normaliza/valida novamente, grava `analises_ia`, atualiza `inspecoes` (status_geral, risco, status_processo=`concluida`), atualiza `setores.status_atual` e cria `tarefas_recomendadas`. Não chama a IA.
+### 3. `src/routes/_authenticated.inspecao.$id.setor.$sid.tsx`
+- Acrescenta CTA visível "Adicionar fotos" reforçado quando `total === 0` (apenas reforço visual; sem nova lógica).
+- (Opcional, baixo custo) chip mostrando "X fotos enviadas neste setor".
 
-Validação reaproveita a função `normalizar()` existente. Se `mode: "save"` vier sem `analise` válida, retorna 400.
+### 4. `src/routes/_authenticated.inspecao.$id.analisando.tsx`
+- Antes de chamar `supabase.functions.invoke`, faz uma verificação rápida (`select count`) de `fotos_inspecao` para a inspeção. Se 0, define `erro = "Inspeção sem fotos. Volte e adicione ao menos 1 foto antes de analisar."` e não chama a edge function. Salvaguarda caso o usuário chegue por URL direta.
+- Reverte `status_processo` para `em_andamento` nesse caso (já que `observacoes` marcou `analisando`).
 
-### 2. Tela `src/routes/_authenticated.inspecao.$id.analisando.tsx`
+### 5. Mensagens (todas em PT-BR, tom direto)
+- Bloqueio sem fotos: **"Adicione ao menos 1 foto da área inspecionada para enviar à IA."**
+- Bloqueio pendentes: **"Há {n} foto(s) ainda não sincronizada(s). Sincronize antes de analisar."** + botão "Ir para Sincronização".
+- Bloqueio offline sem fotos: **"Você está offline e ainda não há fotos enviadas. Capture e sincronize ao menos 1 foto."**
+- Aviso (poucas/pouco diversas): **"Recomendamos pelo menos 3 fotos cobrindo 2 tipos diferentes para uma análise mais precisa. Você pode continuar, mas o resultado pode vir degradado."**
 
-- Invocar `analisar-inspecao` com `{ inspecao_id, mode: "preview" }`.
-- Em vez de navegar para `/inspecao/$id/resultado`, navegar para `/inspecao/$id/preview-ia` passando o `preview` via `navigate({ state: { preview, degradado, fotos } })` ou armazenando em um `sessionStorage` chaveado por `inspecao_id` (mais robusto a reloads).
+## Fora de escopo
 
-### 3. Nova tela `src/routes/_authenticated.inspecao.$id.preview-ia.tsx`
+- Não muda a edge function `analisar-inspecao` (ela já degrada graciosamente quando não há fotos; a validação é client-side e UX).
+- Não muda schema do banco.
+- Não altera os limites mínimos por `tipo_foto` específico (geral/plantas/folhas/etc.) — apenas contagem total e diversidade.
 
-Conteúdo:
+## Pergunta opcional ao usuário
 
-- **Cabeçalho** com badge "Pré-visualização" + aviso "Esta análise ainda não foi salva".
-- **Campos editáveis** (controlados em estado local):
-  - `status_geral` — Select (`normal` / `atencao` / `critico`).
-  - `risco` — Select (`baixo` / `medio` / `alto`).
-  - `prioridade` — Select (`baixa` / `media` / `alta` / `urgente`).
-  - `confianca` — Slider 0–100%.
-  - `necessidade_agronomo` — Switch.
-  - `justificativa` — Textarea.
-  - Listas (`problemas_detectados`, `hipoteses_agronomicas`, `acoes_recomendadas`) — editor simples de chips/itens (adicionar/remover linha).
-- **Bloco "JSON bruto"** colapsável (`<details>`), exibindo o JSON formatado e botão "Copiar JSON".
-- Se `degradado` veio do preview, mostra alerta amarelo ("Análise gerada por fallback — revise com cuidado").
-- Rodapé fixo com:
-  - **Descartar** → confirma e volta para `/inspecao/$id/observacoes` (sem gravar).
-  - **Reanalisar** → volta para `/inspecao/$id/analisando` (refaz preview).
-  - **Salvar análise** (primário) → chama `analisar-inspecao` com `{ inspecao_id, mode: "save", analise: <estado editado> }`, mostra toast e navega para `/inspecao/$id/resultado`.
-
-Se o usuário entrar direto na URL sem `preview` no estado/sessionStorage, mostra mensagem "Pré-visualização expirada" e botão para reanalisar.
-
-### 4. Tela de resultado (`_authenticated.inspecao.$id.resultado.tsx`)
-
-Sem mudanças funcionais. Só continua lendo a análise mais recente — agora será a versão revisada pelo usuário.
-
-## Pontos técnicos
-
-- **Schema do payload de preview/save** é o mesmo `AnalysisResult` da edge: `status_geral`, `risco`, `confianca`, `problemas_detectados`, `hipoteses_agronomicas`, `acoes_recomendadas`, `justificativa`, `necessidade_agronomo`, `prioridade`.
-- **Persistência intermediária**: `sessionStorage` (chave `preview-ia:<inspecao_id>`) para sobreviver a refresh acidental; limpa após `mode: "save"` bem-sucedido ou após "Descartar".
-- **Status da inspeção**: durante a pré-visualização, `status_processo` permanece `em_andamento` (a edge não altera no modo preview); só vira `concluida` depois do save. Isso mantém a tela inicial mostrando "Continuar Inspeção" corretamente caso o usuário saia.
-- **Idempotência**: cada save insere uma nova linha em `analises_ia` (igual hoje) — a tela de resultado já lê só a mais recente, então re-saves continuam funcionando.
-- **Sem mudanças de schema do banco**.
-- A rota nova precisa entrar antes do build (`src/routes/_authenticated.inspecao.$id.preview-ia.tsx`) — o plugin do TanStack regenera `routeTree.gen.ts` automaticamente.
+Os limites (`mínimo=1`, `recomendado=3` fotos, `2` tipos) são razoáveis para morango, mas posso ajustar se você preferir outros números — diga antes ou depois de implementar.

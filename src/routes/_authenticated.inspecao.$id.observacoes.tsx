@@ -7,8 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Camera, AlertTriangle, Info } from "lucide-react";
 import { StatusProcessoBadge, useStatusProcesso } from "@/components/status-processo-badge";
+import { useInspecaoFotos } from "@/lib/use-inspecao-fotos";
+import { useOnlineStatus } from "@/lib/use-online";
 
 const OBS = [
   ["mato_alto", "Mato alto"],
@@ -35,10 +37,19 @@ function ObsPage() {
   const [busy, setBusy] = useState(false);
   const lockRef = useRef(false);
   const statusProcesso = useStatusProcesso(id);
+  const online = useOnlineStatus();
+  const fotosInfo = useInspecaoFotos(id);
+  const validacao = fotosInfo.validar(online);
 
   const analisar = async () => {
-    // Guarda síncrona contra cliques múltiplos rápidos (antes do re-render)
     if (lockRef.current || busy) return;
+    // Revalida no momento do clique
+    await fotosInfo.refetch();
+    const v = fotosInfo.validar(online);
+    if (!v.ok) {
+      toast.error(v.mensagem ?? "Não é possível analisar agora");
+      return;
+    }
     lockRef.current = true;
     setBusy(true);
     try {
@@ -52,7 +63,6 @@ function ObsPage() {
       if (uErr) throw uErr;
 
       navigate({ to: "/inspecao/$id/analisando", params: { id } });
-      // Mantém o lock ativo — a navegação desmonta esta tela
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");
       lockRef.current = false;
@@ -92,7 +102,58 @@ function ObsPage() {
         />
       </div>
 
-      <Button className="mt-6 h-12 w-full text-base" onClick={analisar} disabled={busy}>
+      {/* Card de status de fotos */}
+      <div
+        className={`mt-4 rounded-2xl border p-4 ${
+          validacao.nivel === "bloqueio"
+            ? "border-destructive/40 bg-destructive/10"
+            : validacao.nivel === "aviso"
+            ? "border-yellow-500/40 bg-yellow-500/10"
+            : "border-border bg-card"
+        }`}
+      >
+        <div className="flex items-start gap-2">
+          {validacao.nivel === "bloqueio" ? (
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+          ) : validacao.nivel === "aviso" ? (
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
+          ) : (
+            <Camera className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          )}
+          <div className="flex-1 space-y-1 text-sm">
+            <div className="font-medium">
+              Fotos: {fotosInfo.total} enviada{fotosInfo.total === 1 ? "" : "s"} ·{" "}
+              {fotosInfo.tiposDistintos} tipo{fotosInfo.tiposDistintos === 1 ? "" : "s"}
+              {fotosInfo.pendentes > 0 ? ` · ${fotosInfo.pendentes} pendente${fotosInfo.pendentes > 1 ? "s" : ""}` : ""}
+            </div>
+            {validacao.mensagem ? (
+              <p className="text-xs text-muted-foreground">{validacao.mensagem}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Tudo certo para a análise multimodal.</p>
+            )}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.history.back()}
+              >
+                <Camera className="mr-1 h-3 w-3" /> Voltar e adicionar fotos
+              </Button>
+              {validacao.acao === "sincronizar" ? (
+                <Button size="sm" variant="outline" onClick={() => navigate({ to: "/sincronizacao" })}>
+                  Ir para Sincronização
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Button
+        className="mt-4 h-12 w-full text-base"
+        onClick={analisar}
+        disabled={busy || fotosInfo.loading || !validacao.ok}
+      >
         {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
         Salvar e Analisar com IA
       </Button>

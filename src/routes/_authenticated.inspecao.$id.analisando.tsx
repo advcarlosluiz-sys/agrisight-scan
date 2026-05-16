@@ -43,6 +43,20 @@ function AnalisandoPage() {
 
     (async () => {
       try {
+        // Salvaguarda: bloqueia análise sem fotos persistidas
+        const { count, error: countErr } = await supabase
+          .from("fotos_inspecao")
+          .select("id", { count: "exact", head: true })
+          .eq("inspecao_id", id);
+        if (countErr) throw countErr;
+        if (!count || count < 1) {
+          await supabase
+            .from("inspecoes")
+            .update({ status_processo: "em_andamento" })
+            .eq("id", id);
+          throw new Error("Inspeção sem fotos. Volte e adicione ao menos 1 foto antes de analisar.");
+        }
+
         const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
           body: { inspecao_id: id, mode: "preview" },
         });
