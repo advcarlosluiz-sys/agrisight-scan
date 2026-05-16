@@ -100,6 +100,7 @@ function AnalisandoPage() {
   const ranRef = useRef(false);
   const executandoRef = useRef(false);
   const canceladoRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
   const statusProcesso = useStatusProcesso(id);
 
   const marcarStatus = (fotoId: string, status: FotoStatus) =>
