@@ -50,12 +50,13 @@ function Dashboard() {
   const { filtro, q, ordem } = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
   usePersistedFilter("dashboard:filtro", filtro, "todos", "/dashboard");
+  type DashSearch = { filtro: Filtro; q: string; ordem: Ordem };
   const setFiltro = (f: Filtro) =>
-    navigate({ search: (prev) => ({ ...prev, filtro: f }), replace: true });
+    navigate({ search: (prev: DashSearch) => ({ ...prev, filtro: f }), replace: true });
   const setQ = (v: string) =>
-    navigate({ search: (prev) => ({ ...prev, q: v }), replace: true });
+    navigate({ search: (prev: DashSearch) => ({ ...prev, q: v }), replace: true });
   const setOrdem = (o: Ordem) =>
-    navigate({ search: (prev) => ({ ...prev, ordem: o }), replace: true });
+    navigate({ search: (prev: DashSearch) => ({ ...prev, ordem: o }), replace: true });
   const PAGE_SIZE = 10;
   const ordemCfg = ORDEM_CONFIG[ordem];
   const {
