@@ -152,11 +152,43 @@ function AnalisandoPage() {
       // Se a análise já foi concluída (ex.: outra aba), pula direto p/ resultado.
       const { data: insp } = await supabase
         .from("inspecoes")
-        .select("status_processo")
+        .select("status_processo, organizacao_id")
         .eq("id", id)
         .maybeSingle();
       if (canceladoRef.current) return;
       const sp = insp?.status_processo as string | undefined;
+      const orgId = (insp?.organizacao_id as string | undefined) ?? null;
+
+      // Registra cada tentativa (sucesso, falha ou fallback) na tabela de
+      // histórico — fire-and-forget, nunca quebra o fluxo principal.
+      const logarTentativa = async (registro: {
+        tentativa: number;
+        sucesso: boolean;
+        degradado?: boolean;
+        degradado_codigo?: string | null;
+        degradado_detalhe?: string | null;
+        http_status?: number | null;
+        duracao_ms?: number | null;
+        erro_mensagem?: string | null;
+      }) => {
+        if (!orgId) return;
+        try {
+          await supabase.from("tentativas_analise_ia").insert({
+            organizacao_id: orgId,
+            inspecao_id: id,
+            tentativa: registro.tentativa,
+            sucesso: registro.sucesso,
+            degradado: registro.degradado ?? false,
+            degradado_codigo: registro.degradado_codigo ?? null,
+            degradado_detalhe: registro.degradado_detalhe ?? null,
+            http_status: registro.http_status ?? null,
+            duracao_ms: registro.duracao_ms ?? null,
+            erro_mensagem: registro.erro_mensagem ?? null,
+          });
+        } catch {
+          // ignora — log é auxiliar
+        }
+      };
       if (sp === "concluida") {
         navigate({ to: "/inspecao/$id/resultado", params: { id }, replace: true });
         return;
@@ -247,9 +279,13 @@ function AnalisandoPage() {
         // são reprocessadas — a IA precisaria de intervenção manual.
         setTentativa(1);
         let ultimaTentativa: Error | null = null;
+        let ultimaTentativaNum = 1;
+        let ultimoHttpStatus: number | null = null;
         for (let n = 1; n <= MAX_TENTATIVAS; n++) {
           if (canceladoRef.current) return;
           setTentativa(n);
+          ultimaTentativaNum = n;
+          const inicio = Date.now();
 
           const ctrl = new AbortController();
           abortRef.current = ctrl;
@@ -271,6 +307,13 @@ function AnalisandoPage() {
           } catch (netErr) {
             if (canceladoRef.current) return;
             ultimaTentativa = netErr instanceof Error ? netErr : new Error(String(netErr));
+            void logarTentativa({
+              tentativa: n,
+              sucesso: false,
+              degradado_codigo: "rede",
+              duracao_ms: Date.now() - inicio,
+              erro_mensagem: ultimaTentativa.message.slice(0, 500),
+            });
             // Falha de rede no cliente: reprocessar até o limite.
             if (n < MAX_TENTATIVAS) {
               await aguardarBackoff(n, canceladoRef);
@@ -282,6 +325,7 @@ function AnalisandoPage() {
           }
 
           if (canceladoRef.current) return;
+          ultimoHttpStatus = r.status;
           const text = await r.text();
           let parsed: unknown = null;
           try {
@@ -293,10 +337,26 @@ function AnalisandoPage() {
           // HTTP transitório: 429 (limite) ou 5xx (instabilidade).
           if (!r.ok && (r.status === 429 || r.status >= 500) && n < MAX_TENTATIVAS) {
             console.warn(`Reprocessando após HTTP ${r.status} (tentativa ${n}/${MAX_TENTATIVAS})`);
+            void logarTentativa({
+              tentativa: n,
+              sucesso: false,
+              degradado_codigo: r.status === 429 ? "http_429" : "http_5xx",
+              http_status: r.status,
+              duracao_ms: Date.now() - inicio,
+              erro_mensagem: ((parsed as { error?: string })?.error ?? text).slice(0, 500),
+            });
             await aguardarBackoff(n, canceladoRef);
             continue;
           }
           if (!r.ok) {
+            void logarTentativa({
+              tentativa: n,
+              sucesso: false,
+              degradado_codigo: `http_${r.status}`,
+              http_status: r.status,
+              duracao_ms: Date.now() - inicio,
+              erro_mensagem: ((parsed as { error?: string })?.error ?? text).slice(0, 500),
+            });
             const err = new Error(
               (parsed as { error?: string })?.error || `HTTP ${r.status}`,
             ) as Error & { context?: Response };
@@ -309,12 +369,34 @@ function AnalisandoPage() {
           // IA respondeu mas caiu em fallback por causa transitória: tentar novamente.
           if (codigo && CODIGOS_TRANSITORIOS.has(codigo) && n < MAX_TENTATIVAS) {
             console.warn(`Reprocessando após fallback "${codigo}" (tentativa ${n}/${MAX_TENTATIVAS})`);
+            void logarTentativa({
+              tentativa: n,
+              sucesso: false,
+              degradado: true,
+              degradado_codigo: codigo,
+              degradado_detalhe: candidato.degradado_detalhe ?? null,
+              http_status: r.status,
+              duracao_ms: Date.now() - inicio,
+            });
             await aguardarBackoff(n, canceladoRef);
             continue;
           }
+          void logarTentativa({
+            tentativa: n,
+            sucesso: true,
+            degradado: Boolean(candidato?.degradado_codigo),
+            degradado_codigo: candidato?.degradado_codigo ?? null,
+            degradado_detalhe: candidato?.degradado_detalhe ?? null,
+            http_status: r.status,
+            duracao_ms: Date.now() - inicio,
+          });
           resp = candidato;
           break;
         }
+        // Marcador usado pelo catch para anexar metadados ao log de erro final.
+        void ultimaTentativa;
+        void ultimaTentativaNum;
+        void ultimoHttpStatus;
       } finally {
         clearInterval(tickEnvio);
       }
