@@ -16,6 +16,85 @@ const STATUS_HEX: Record<string, string> = {
 };
 const SEM_STATUS_HEX = "#9ca3af";
 
+const STATUS_PROC_LABEL: Record<string, string> = {
+  em_andamento: "Em andamento",
+  analisando: "Analisando",
+  concluida: "Concluída",
+  cancelada: "Cancelada",
+};
+
+type HistEvento = {
+  quando: string;
+  titulo: string;
+  detalhe?: string;
+  cor: [number, number, number];
+};
+
+function fmtDateTime(d: Date) {
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function buildHistorico(ip: any, analise: any, inspecaoId: string): HistEvento[] {
+  const evs: HistEvento[] = [];
+  if (ip?.created_at) {
+    evs.push({
+      quando: fmtDateTime(new Date(ip.created_at)),
+      titulo: "Inspeção criada",
+      detalhe: "Status inicial: Em andamento",
+      cor: [156, 163, 175],
+    });
+  }
+  if (analise?.created_at) {
+    evs.push({
+      quando: fmtDateTime(new Date(analise.created_at)),
+      titulo: "Análise da IA executada",
+      detalhe: `Modelo: ${analise.modelo_ia ?? "-"} · Confiança: ${Math.round((analise.confianca ?? 0) * 100)}%`,
+      cor: [59, 130, 246],
+    });
+  }
+  const sp = String(ip?.status_processo ?? "em_andamento");
+  if (sp === "concluida") {
+    evs.push({
+      quando: analise?.created_at ? fmtDateTime(new Date(analise.created_at)) : "—",
+      titulo: "Processo concluído",
+      detalhe: "Análise finalizada e disponível para consulta.",
+      cor: [22, 163, 74],
+    });
+  } else if (sp === "cancelada") {
+    let quando = "—";
+    let motivo = "";
+    try {
+      const v = typeof window !== "undefined"
+        ? window.localStorage.getItem(`analise-cancelada:${inspecaoId}`)
+        : null;
+      if (v) {
+        const parsed = JSON.parse(v) as { em?: string; motivo?: string };
+        if (parsed.em) quando = fmtDateTime(new Date(parsed.em));
+        motivo = parsed.motivo ?? "";
+      }
+    } catch {
+      // ignora
+    }
+    evs.push({
+      quando,
+      titulo: "Análise cancelada",
+      detalhe: motivo ? `Motivo: ${motivo}` : "Sem motivo registrado.",
+      cor: [220, 38, 38],
+    });
+  } else if (sp === "analisando") {
+    evs.push({
+      quando: "—",
+      titulo: "Análise em andamento",
+      detalhe: "Aguardando conclusão da execução da IA.",
+      cor: [37, 99, 235],
+    });
+  }
+  return evs;
+}
+
 export const Route = createFileRoute("/_authenticated/relatorio/$id")({
   component: Relatorio,
 });
