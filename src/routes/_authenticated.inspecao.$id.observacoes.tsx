@@ -36,6 +36,7 @@ function ObsPage() {
   const [outros, setOutros] = useState(false);
   const [busy, setBusy] = useState(false);
   const [canceladaEm, setCanceladaEm] = useState<Date | null>(null);
+  const [motivoCancelamento, setMotivoCancelamento] = useState<string>("");
   const lockRef = useRef(false);
   const statusProcesso = useStatusProcesso(id);
   useRedirectIfAnalisando(id);
@@ -46,10 +47,22 @@ function ObsPage() {
   useEffect(() => {
     try {
       const v = localStorage.getItem(`analise-cancelada:${id}`);
-      if (v) {
-        const d = new Date(v);
+      if (!v) return;
+      // Compatível com formato antigo (apenas ISO string) e novo (JSON).
+      let isoEm: string | null = null;
+      let motivo = "";
+      if (v.startsWith("{")) {
+        const parsed = JSON.parse(v) as { em?: string; motivo?: string };
+        isoEm = parsed.em ?? null;
+        motivo = parsed.motivo ?? "";
+      } else {
+        isoEm = v;
+      }
+      if (isoEm) {
+        const d = new Date(isoEm);
         if (!Number.isNaN(d.getTime())) setCanceladaEm(d);
       }
+      setMotivoCancelamento(motivo);
     } catch {
       // ignora
     }
