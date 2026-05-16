@@ -19,7 +19,14 @@ export function usePersistedFilter<T extends string>(
   useEffect(() => {
     if (restored.current) return;
     restored.current = true;
-    if (current === defaultValue) {
+
+    // If the URL already specifies `filtro` explicitly (e.g. via browser
+    // back/forward restoring history), trust it and don't override from storage.
+    const urlHasFiltro =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).has("filtro");
+
+    if (!urlHasFiltro && current === defaultValue) {
       const saved = sessionStorage.getItem(storageKey) as T | null;
       if (saved && saved !== defaultValue) {
         navigate({
@@ -36,4 +43,15 @@ export function usePersistedFilter<T extends string>(
   useEffect(() => {
     if (restored.current) sessionStorage.setItem(storageKey, current);
   }, [storageKey, current]);
+
+  // Sync storage with URL on browser back/forward (popstate).
+  useEffect(() => {
+    const onPopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const fromUrl = (params.get("filtro") as T | null) ?? defaultValue;
+      sessionStorage.setItem(storageKey, fromUrl);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [storageKey, defaultValue]);
 }
