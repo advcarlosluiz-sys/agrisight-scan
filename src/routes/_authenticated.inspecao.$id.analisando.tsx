@@ -221,49 +221,88 @@ function AnalisandoPage() {
         fotos?: unknown;
       };
       let resp: RespIA | null = null;
-      const ctrl = new AbortController();
-      abortRef.current = ctrl;
       try {
-        // Usa fetch direto (em vez de supabase.functions.invoke) para podermos
-        // abortar a conexão e propagar o cancelamento até a Edge Function,
-        // que por sua vez aborta a chamada à IA via req.signal.
         const { data: sess } = await supabase.auth.getSession();
         const token = sess.session?.access_token;
         const supaUrl = import.meta.env.VITE_SUPABASE_URL as string;
         const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-        const r = await fetch(`${supaUrl}/functions/v1/analisar-inspecao`, {
-          method: "POST",
-          signal: ctrl.signal,
-          headers: {
-            "Content-Type": "application/json",
-            apikey: anonKey,
-            Authorization: `Bearer ${token ?? anonKey}`,
-          },
-          body: JSON.stringify({ inspecao_id: id, mode: "preview" }),
-        });
-        if (canceladoRef.current) return;
-        const text = await r.text();
-        let parsed: unknown = null;
-        try {
-          parsed = text ? JSON.parse(text) : null;
-        } catch {
-          parsed = { error: text || `HTTP ${r.status}` };
+
+        // Reprocessamento automático para falhas transitórias.
+        // Causas elegíveis: timeout, falha de rede, 429 (limite temporário) e 5xx.
+        // Outras causas (4xx não-429, JSON inválido, resposta_vazia, créditos) NÃO
+        // são reprocessadas — a IA precisaria de intervenção manual.
+        setTentativa(1);
+        let ultimaTentativa: Error | null = null;
+        for (let n = 1; n <= MAX_TENTATIVAS; n++) {
+          if (canceladoRef.current) return;
+          setTentativa(n);
+
+          const ctrl = new AbortController();
+          abortRef.current = ctrl;
+          let r: Response;
+          try {
+            // Usa fetch direto (em vez de supabase.functions.invoke) para podermos
+            // abortar a conexão e propagar o cancelamento até a Edge Function,
+            // que por sua vez aborta a chamada à IA via req.signal.
+            r = await fetch(`${supaUrl}/functions/v1/analisar-inspecao`, {
+              method: "POST",
+              signal: ctrl.signal,
+              headers: {
+                "Content-Type": "application/json",
+                apikey: anonKey,
+                Authorization: `Bearer ${token ?? anonKey}`,
+              },
+              body: JSON.stringify({ inspecao_id: id, mode: "preview" }),
+            });
+          } catch (netErr) {
+            if (canceladoRef.current) return;
+            ultimaTentativa = netErr instanceof Error ? netErr : new Error(String(netErr));
+            // Falha de rede no cliente: reprocessar até o limite.
+            if (n < MAX_TENTATIVAS) {
+              await aguardarBackoff(n, canceladoRef);
+              continue;
+            }
+            throw ultimaTentativa;
+          } finally {
+            abortRef.current = null;
+          }
+
+          if (canceladoRef.current) return;
+          const text = await r.text();
+          let parsed: unknown = null;
+          try {
+            parsed = text ? JSON.parse(text) : null;
+          } catch {
+            parsed = { error: text || `HTTP ${r.status}` };
+          }
+
+          // HTTP transitório: 429 (limite) ou 5xx (instabilidade).
+          if (!r.ok && (r.status === 429 || r.status >= 500) && n < MAX_TENTATIVAS) {
+            console.warn(`Reprocessando após HTTP ${r.status} (tentativa ${n}/${MAX_TENTATIVAS})`);
+            await aguardarBackoff(n, canceladoRef);
+            continue;
+          }
+          if (!r.ok) {
+            const err = new Error(
+              (parsed as { error?: string })?.error || `HTTP ${r.status}`,
+            ) as Error & { context?: Response };
+            err.context = new Response(text, { status: r.status, headers: r.headers });
+            throw err;
+          }
+
+          const candidato = parsed as RespIA;
+          const codigo = candidato?.degradado_codigo ?? null;
+          // IA respondeu mas caiu em fallback por causa transitória: tentar novamente.
+          if (codigo && CODIGOS_TRANSITORIOS.has(codigo) && n < MAX_TENTATIVAS) {
+            console.warn(`Reprocessando após fallback "${codigo}" (tentativa ${n}/${MAX_TENTATIVAS})`);
+            await aguardarBackoff(n, canceladoRef);
+            continue;
+          }
+          resp = candidato;
+          break;
         }
-        if (!r.ok) {
-          const err = new Error(
-            (parsed as { error?: string })?.error || `HTTP ${r.status}`,
-          ) as Error & { context?: Response };
-          // Reanexa um Response para extrairErroEdge ler status/payload.
-          err.context = new Response(text, {
-            status: r.status,
-            headers: r.headers,
-          });
-          throw err;
-        }
-        resp = parsed as RespIA;
       } finally {
         clearInterval(tickEnvio);
-        abortRef.current = null;
       }
 
       if (resp?.error) throw new Error(resp.error);
