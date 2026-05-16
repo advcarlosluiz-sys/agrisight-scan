@@ -41,6 +41,7 @@ function HistoricoPage() {
   const { filtro, q } = Route.useSearch();
   const navigate = useNavigate({ from: "/historico" });
   usePersistedFilter("status-processo:filtro", filtro, "todos", "/historico");
+  useInvalidFiltroToast(FILTRO_VALORES);
   const setFiltro = (f: Filtro) =>
     navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, filtro: f }), replace: true });
   const setQ = (v: string) =>
