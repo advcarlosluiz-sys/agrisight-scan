@@ -53,15 +53,19 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "missing_auth" }, 401);
 
-    let body: { inspecao_id?: string };
+    let body: { inspecao_id?: string; mode?: "preview" | "save"; analise?: unknown };
     try {
       body = await req.json();
     } catch {
       return json({ error: "JSON inválido no corpo da requisição" }, 400);
     }
     const inspecao_id = body?.inspecao_id;
+    const mode: "preview" | "save" = body?.mode === "save" ? "save" : "preview";
     if (!inspecao_id || typeof inspecao_id !== "string") {
       return json({ error: "inspecao_id obrigatório" }, 400);
+    }
+    if (mode === "save" && (!body.analise || typeof body.analise !== "object")) {
+      return json({ error: "analise obrigatória no modo save" }, 400);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -152,79 +156,91 @@ Observações marcadas: ${checkboxes.length ? checkboxes.join(", ") : "nenhuma"}
 Observação manual: ${inspecao.observacao_manual ?? "—"}
 Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${totalFotos} disponíveis${fotosFalhadas ? ` (${fotosFalhadas} falharam ao carregar)` : ""}`}.`;
 
-    // 5. Chamar IA com timeout
+    // 5. Chamar IA com timeout (somente em modo preview)
     let parsed: AnalysisResult | null = null;
     let aiDegradado: string | null = null;
 
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), AI_TIMEOUT_MS);
+    if (mode === "preview") {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), AI_TIMEOUT_MS);
 
-    try {
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        signal: ctrl.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: MODELO_IA,
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: [{ type: "text", text: userText }, ...imageContents],
-            },
-          ],
-          response_format: { type: "json_object" },
-        }),
-      });
-
-      if (aiResp.status === 429) {
-        await marcarFalha(admin, inspecao_id);
-        return json({ error: "Limite de uso da IA atingido. Tente novamente em instantes." }, 429);
-      }
-      if (aiResp.status === 402) {
-        await marcarFalha(admin, inspecao_id);
-        return json(
-          { error: "Créditos da IA esgotados. Adicione créditos em Configurações > Workspace." },
-          402,
-        );
-      }
-      if (!aiResp.ok) {
-        const txt = await safeText(aiResp);
-        console.error("AI error", aiResp.status, txt);
-        aiDegradado = `IA retornou ${aiResp.status}`;
-      } else {
-        const aiJson = await aiResp.json().catch((e) => {
-          console.error("Falha ao parsear JSON da resposta IA:", e);
-          return null;
+      try {
+        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          signal: ctrl.signal,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: MODELO_IA,
+            messages: [
+              { role: "system", content: systemPrompt },
+              {
+                role: "user",
+                content: [{ type: "text", text: userText }, ...imageContents],
+              },
+            ],
+            response_format: { type: "json_object" },
+          }),
         });
-        const raw = aiJson?.choices?.[0]?.message?.content;
-        if (!raw) {
-          aiDegradado = "Resposta da IA vazia";
+
+        if (aiResp.status === 429) {
+          return json({ error: "Limite de uso da IA atingido. Tente novamente em instantes." }, 429);
+        }
+        if (aiResp.status === 402) {
+          return json(
+            { error: "Créditos da IA esgotados. Adicione créditos em Configurações > Workspace." },
+            402,
+          );
+        }
+        if (!aiResp.ok) {
+          const txt = await safeText(aiResp);
+          console.error("AI error", aiResp.status, txt);
+          aiDegradado = `IA retornou ${aiResp.status}`;
         } else {
-          try {
-            const obj = typeof raw === "string" ? JSON.parse(raw) : raw;
-            parsed = normalizar(obj);
-          } catch (e) {
-            console.error("Falha ao parsear conteúdo IA:", e, "raw:", String(raw).slice(0, 500));
-            aiDegradado = "Resposta da IA não é JSON válido";
+          const aiJson = await aiResp.json().catch((e) => {
+            console.error("Falha ao parsear JSON da resposta IA:", e);
+            return null;
+          });
+          const raw = aiJson?.choices?.[0]?.message?.content;
+          if (!raw) {
+            aiDegradado = "Resposta da IA vazia";
+          } else {
+            try {
+              const obj = typeof raw === "string" ? JSON.parse(raw) : raw;
+              parsed = normalizar(obj);
+            } catch (e) {
+              console.error("Falha ao parsear conteúdo IA:", e, "raw:", String(raw).slice(0, 500));
+              aiDegradado = "Resposta da IA não é JSON válido";
+            }
           }
         }
+      } catch (e) {
+        const aborted = (e as Error)?.name === "AbortError";
+        console.error(aborted ? "Timeout da IA" : "Erro de rede com IA:", e);
+        aiDegradado = aborted ? "Tempo limite da IA excedido" : "Falha de rede com a IA";
+      } finally {
+        clearTimeout(timer);
       }
-    } catch (e) {
-      const aborted = (e as Error)?.name === "AbortError";
-      console.error(aborted ? "Timeout da IA" : "Erro de rede com IA:", e);
-      aiDegradado = aborted ? "Tempo limite da IA excedido" : "Falha de rede com a IA";
-    } finally {
-      clearTimeout(timer);
+
+      // 6. Fallback heurístico se IA falhou
+      if (!parsed) {
+        parsed = fallbackHeuristico(checkboxes, semFotos, aiDegradado ?? "IA indisponível");
+      }
+
+      // 6b. Retorna preview SEM persistir nada (status_processo permanece em_andamento).
+      return json({
+        ok: true,
+        preview: parsed,
+        degradado: aiDegradado,
+        fotos: { total: totalFotos, usadas: imageContents.length, falhadas: fotosFalhadas },
+      });
     }
 
-    // 6. Fallback heurístico se IA falhou
-    if (!parsed) {
-      parsed = fallbackHeuristico(checkboxes, semFotos, aiDegradado ?? "IA indisponível");
-    }
+    // === Modo SAVE: normaliza o JSON revisado pelo usuário e persiste ===
+    parsed = normalizar(body.analise);
+
 
     // 7. Persistir análise
     const { data: analise, error: aErr } = await admin

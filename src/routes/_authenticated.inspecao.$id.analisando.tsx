@@ -17,7 +17,7 @@ const ETAPAS = [
   "Buscando fotos no armazenamento...",
   "Enviando imagens para a IA...",
   "Analisando padrões agronômicos...",
-  "Gerando diagnóstico e tarefas...",
+  "Preparando pré-visualização...",
 ];
 
 function AnalisandoPage() {
@@ -44,16 +44,26 @@ function AnalisandoPage() {
     (async () => {
       try {
         const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
-          body: { inspecao_id: id },
+          body: { inspecao_id: id, mode: "preview" },
         });
         if (canceladoRef.current) return;
         if (error) throw error;
-        if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+        const resp = data as { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown };
+        if (resp?.error) throw new Error(resp.error);
+        if (!resp?.preview) throw new Error("Resposta da IA sem preview");
         setProgresso(100);
         setEtapa(ETAPAS.length - 1);
-        toast.success("Análise concluída");
+        try {
+          sessionStorage.setItem(
+            `preview-ia:${id}`,
+            JSON.stringify({ preview: resp.preview, degradado: resp.degradado ?? null, fotos: resp.fotos ?? null, ts: Date.now() }),
+          );
+        } catch {
+          // ignora — preview ainda pode ser exibida via state se disponível
+        }
+        toast.success("Pré-visualização pronta — revise antes de salvar");
         setTimeout(() => {
-          if (!canceladoRef.current) navigate({ to: "/inspecao/$id/resultado", params: { id } });
+          if (!canceladoRef.current) navigate({ to: "/inspecao/$id/preview-ia", params: { id } });
         }, 350);
       } catch (e) {
         if (canceladoRef.current) return;
