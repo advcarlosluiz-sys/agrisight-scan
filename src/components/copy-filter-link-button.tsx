@@ -39,6 +39,16 @@ export function CopyFilterLinkButton({ className }: { className?: string }) {
     }
   };
 
+  // Native <button> already triggers onClick on Enter and Space; we keep the
+  // default behavior and only add explicit handling to prevent page scroll on
+  // Space while the button is focused.
+  const onKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === " " || event.key === "Spacebar") {
+      event.preventDefault();
+      void onClick();
+    }
+  };
+
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
@@ -46,26 +56,33 @@ export function CopyFilterLinkButton({ className }: { className?: string }) {
           <button
             type="button"
             onClick={onClick}
-            aria-live="polite"
+            onKeyDown={onKeyDown}
             aria-label={
               copied
                 ? "Link copiado para a área de transferência"
-                : "Copiar link do filtro atual (inclui ?filtro=)"
+                : "Copiar link do filtro atual, incluindo o status selecionado"
             }
+            aria-pressed={copied}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium shadow-sm transition active:scale-[0.98]",
+              // Visible keyboard focus indicator (WCAG 2.4.7) using design tokens.
+              "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               copied
                 ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                : "border-border bg-card text-foreground",
+                : "border-border bg-card text-foreground hover:bg-accent hover:text-accent-foreground",
               className,
             )}
           >
             {copied ? (
-              <Check className="h-3.5 w-3.5" />
+              <Check className="h-3.5 w-3.5" aria-hidden="true" />
             ) : (
-              <Link2 className="h-3.5 w-3.5" />
+              <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
             )}
-            {copied ? "Link copiado!" : "Copiar link"}
+            <span>{copied ? "Link copiado!" : "Copiar link"}</span>
+            {/* Live region for screen readers — announces the copy result. */}
+            <span className="sr-only" role="status" aria-live="polite">
+              {copied ? "Link copiado para a área de transferência" : ""}
+            </span>
           </button>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-[14rem] text-center">
