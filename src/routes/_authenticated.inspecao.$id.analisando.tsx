@@ -17,7 +17,7 @@ const ETAPAS = [
   "Buscando fotos no armazenamento...",
   "Enviando imagens para a IA...",
   "Analisando padrões agronômicos...",
-  "Gerando diagnóstico e tarefas...",
+  "Preparando pré-visualização...",
 ];
 
 function AnalisandoPage() {
