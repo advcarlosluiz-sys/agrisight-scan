@@ -17,6 +17,16 @@ import {
   Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { StatusProcessoBadge, useStatusProcesso } from "@/components/status-processo-badge";
 
 type FotoStatus = "pendente" | "carregada" | "enviada";
@@ -84,6 +94,7 @@ function AnalisandoPage() {
   const [progresso, setProgresso] = useState(8);
   const [etapa, setEtapa] = useState(0);
   const [erro, setErro] = useState<ErroDetalhado | null>(null);
+  const [confirmarCancelar, setConfirmarCancelar] = useState(false);
   const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
   const [fotos, setFotos] = useState<FotoItem[]>([]);
   const ranRef = useRef(false);
@@ -352,7 +363,11 @@ function AnalisandoPage() {
               </div>
             )}
 
-            <Button variant="outline" onClick={cancelar} className="mt-2 w-full max-w-sm">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmarCancelar(true)}
+              className="mt-2 w-full max-w-sm"
+            >
               Cancelar análise
             </Button>
           </>
@@ -437,6 +452,31 @@ function AnalisandoPage() {
           </>
         )}
       </div>
+
+      <AlertDialog open={confirmarCancelar} onOpenChange={setConfirmarCancelar}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar análise em andamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A análise será interrompida e você voltará para a tela de observações.
+              As fotos e observações já registradas não serão perdidas — você pode
+              iniciar a análise novamente quando quiser.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar análise</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmarCancelar(false);
+                void cancelar();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sim, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
