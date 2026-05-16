@@ -78,8 +78,6 @@ function Relatorio() {
       doc.setTextColor(0);
 
       // Bloco identificação
-      doc.setDrawColor(220); doc.setFillColor(248, 250, 252);
-      doc.roundedRect(14, y, W - 28, 38, 2, 2, "FD");
       doc.setFontSize(10);
       const ip = insp as any;
       const linhas: [string, string][] = [
