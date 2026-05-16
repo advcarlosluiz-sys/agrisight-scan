@@ -93,7 +93,12 @@ function HistoricoPage() {
 
   return (
     <AppShell title="Histórico" back="/">
-      <FiltroStatusIndicador filtro={filtro} onClear={() => setFiltro("todos")} />
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <FiltroStatusIndicador filtro={filtro} onClear={() => setFiltro("todos")} />
+        </div>
+        <CopyFilterLinkButton />
+      </div>
       <div className="mb-3 flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -116,7 +121,6 @@ function HistoricoPage() {
             </button>
           )}
         </div>
-        <CopyFilterLinkButton />
       </div>
       {filtro !== "todos" && (
         <div className="mb-2 flex justify-end">
