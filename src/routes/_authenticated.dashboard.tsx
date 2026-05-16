@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Search, X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { AppShell } from "@/components/app-shell";
@@ -42,11 +42,32 @@ function Dashboard() {
     navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, filtro: f }), replace: true });
   const setQ = (v: string) =>
     navigate({ search: (prev: { filtro: Filtro; q: string }) => ({ ...prev, q: v }), replace: true });
-  const { data: inspecoes } = useQuery({
+  const PAGE_SIZE = 10;
+  const {
+    data: inspecoesPages,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: isLoadingInspecoes,
+  } = useInfiniteQuery({
     queryKey: ["dash-inspecoes"],
-    queryFn: async () =>
-      (await supabase.from("inspecoes").select("id, status_geral, status_processo, data_inspecao, setor:setor_id(codigo), canteiro:canteiro_id(nome), propriedade:propriedade_id(nome, produtor:produtor_id(nome))").order("created_at", { ascending: false }).limit(20)).data ?? [],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const from = (pageParam as number) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data } = await supabase
+        .from("inspecoes")
+        .select(
+          "id, status_geral, status_processo, data_inspecao, setor:setor_id(codigo), canteiro:canteiro_id(nome), propriedade:propriedade_id(nome, produtor:produtor_id(nome))",
+        )
+        .order("created_at", { ascending: false })
+        .range(from, to);
+      return data ?? [];
+    },
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < PAGE_SIZE ? undefined : allPages.length,
   });
+  const inspecoes = (inspecoesPages?.pages ?? []).flat();
   // Contagem agregada por status_processo considerando TODAS as inspeções
   // da organização (RLS já restringe), não apenas as últimas 20.
   const { data: statusTotais } = useQuery({
@@ -163,7 +184,7 @@ function Dashboard() {
         {inspecoesFiltradas.length === 0 && (
           <p className="text-sm text-muted-foreground">Nenhuma inspeção neste filtro.</p>
         )}
-        {inspecoesFiltradas.slice(0, 5).map((i: any) => (
+        {inspecoesFiltradas.map((i: any) => (
           <div key={i.id} className="rounded-xl border bg-card p-3">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -179,6 +200,22 @@ function Dashboard() {
             </div>
           </div>
         ))}
+      </div>
+      <div className="mt-3 flex justify-center">
+        {hasNextPage ? (
+          <button
+            type="button"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-card active:scale-[0.98] disabled:opacity-60"
+          >
+            {isFetchingNextPage ? "Carregando…" : "Carregar mais"}
+          </button>
+        ) : (
+          !isLoadingInspecoes && inspecoes.length > 0 && (
+            <p className="text-xs text-muted-foreground">Fim da lista</p>
+          )
+        )}
       </div>
 
       {tarefas && tarefas.length > 0 && (
