@@ -227,11 +227,14 @@ function ColetaPage() {
       });
       if (error) throw error;
       updateUpload(uid, { progresso: 75 });
+      // Próxima posição da ordem para este tipo = (maior ordem atual) + 1
+      const maxOrdem = fotosPorTipo(tipo).reduce((m, f) => Math.max(m, f.ordem ?? 0), -1);
       const { error: insErr } = await supabase.from("fotos_inspecao").insert({
         organizacao_id: orgRes.data!,
         inspecao_id: id,
         tipo_foto: tipo,
         storage_path: path,
+        ordem: maxOrdem + 1,
       });
       if (insErr) throw insErr;
       updateUpload(uid, { status: "concluido", progresso: 100 });
