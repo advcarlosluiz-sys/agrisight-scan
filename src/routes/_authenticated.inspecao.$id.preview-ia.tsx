@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useRedirectIfAnalisando } from "@/components/status-processo-badge";
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/preview-ia")({
   component: PreviewIA,
