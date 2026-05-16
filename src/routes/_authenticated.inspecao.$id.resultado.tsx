@@ -1,12 +1,24 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { StatusPill } from "@/components/status-pill";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertTriangle, FileText, RefreshCw, Sparkles, UserCheck } from "lucide-react";
+import { AlertTriangle, FileText, ListChecks, RefreshCw, Sparkles, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+
+type Tarefa = {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  prioridade: "alta" | "media" | "baixa";
+  status: "pendente" | "em_andamento" | "concluida" | "cancelada";
+  prazo: string | null;
+};
+
+const PRIO_ORDER: Record<string, number> = { alta: 0, media: 1, baixa: 2 };
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
   component: ResultadoPage,
@@ -15,6 +27,7 @@ export const Route = createFileRoute("/_authenticated/inspecao/$id/resultado")({
 function ResultadoPage() {
   const { id } = useParams({ from: "/_authenticated/inspecao/$id/resultado" });
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [reanalisando, setReanalisando] = useState(false);
 
   const reanalisar = async () => {
@@ -45,6 +58,49 @@ function ResultadoPage() {
           .limit(1)
           .maybeSingle()
       ).data,
+  });
+
+  const tarefasQK = ["tarefas-inspecao", id] as const;
+  const { data: tarefas, isLoading: tarefasLoading } = useQuery({
+    queryKey: tarefasQK,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tarefas_recomendadas")
+        .select("id, titulo, descricao, prioridade, status, prazo, created_at")
+        .eq("inspecao_id", id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const rows = (data ?? []) as (Tarefa & { created_at: string })[];
+      return rows.sort((a, b) => {
+        const pa = PRIO_ORDER[a.prioridade] ?? 99;
+        const pb = PRIO_ORDER[b.prioridade] ?? 99;
+        if (pa !== pb) return pa - pb;
+        return a.created_at.localeCompare(b.created_at);
+      });
+    },
+  });
+
+  const toggleTarefa = useMutation({
+    mutationFn: async ({ id: tid, concluida }: { id: string; concluida: boolean }) => {
+      const { error } = await supabase
+        .from("tarefas_recomendadas")
+        .update({ status: concluida ? "concluida" : "pendente" })
+        .eq("id", tid);
+      if (error) throw error;
+    },
+    onMutate: async ({ id: tid, concluida }) => {
+      await queryClient.cancelQueries({ queryKey: tarefasQK });
+      const prev = queryClient.getQueryData<Tarefa[]>(tarefasQK);
+      queryClient.setQueryData<Tarefa[]>(tarefasQK, (old) =>
+        (old ?? []).map((t) => (t.id === tid ? { ...t, status: concluida ? "concluida" : "pendente" } : t)),
+      );
+      return { prev };
+    },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(tarefasQK, ctx.prev);
+      toast.error(err instanceof Error ? err.message : "Erro ao atualizar tarefa");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: tarefasQK }),
   });
 
   if (isLoading) return <AppShell title="Resultado IA" back="/"><p>Carregando...</p></AppShell>;
@@ -96,9 +152,70 @@ function ResultadoPage() {
         )}
       </Section>
 
+      <Section icon={ListChecks} title="Tarefas recomendadas">
+        {tarefasLoading ? (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-12 animate-pulse rounded-lg bg-muted/40" />
+            ))}
+          </div>
+        ) : !tarefas || tarefas.length === 0 ? (
+          <Empty>Nenhuma tarefa gerada para esta inspeção.</Empty>
+        ) : (
+          <div className="space-y-2">
+            {tarefas.map((t) => {
+              const concluida = t.status === "concluida";
+              return (
+                <label
+                  key={t.id}
+                  className="flex items-start gap-3 rounded-lg border bg-background/60 p-3 active:bg-muted"
+                >
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={concluida}
+                    disabled={toggleTarefa.isPending}
+                    onCheckedChange={(v) => toggleTarefa.mutate({ id: t.id, concluida: !!v })}
+                  />
+                  <div className="flex-1 space-y-1">
+                    <p className={`text-sm font-medium ${concluida ? "text-muted-foreground line-through" : ""}`}>
+                      {t.titulo}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-medium ${
+                          t.prioridade === "alta"
+                            ? "bg-destructive/15 text-destructive"
+                            : t.prioridade === "media"
+                            ? "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {t.prioridade}
+                      </span>
+                      {t.prazo ? (
+                        <span className="text-muted-foreground">
+                          prazo: {new Date(t.prazo).toLocaleDateString("pt-BR")}
+                        </span>
+                      ) : null}
+                    </div>
+                    {t.descricao ? (
+                      <p className="text-xs text-muted-foreground">{t.descricao}</p>
+                    ) : null}
+                  </div>
+                </label>
+              );
+            })}
+            <p className="pt-1 text-xs text-muted-foreground">
+              {tarefas.filter((t) => t.status === "concluida").length} de {tarefas.length} concluídas
+            </p>
+          </div>
+        )}
+      </Section>
+
       <Section icon={UserCheck} title="Necessidade de agrônomo">
         <p className="text-sm font-medium">{a.necessidade_agronomo ? "Sim — recomendamos visita técnica" : "Não — manejo padrão"}</p>
       </Section>
+
 
       {a.justificativa && (
         <div className="mt-4 rounded-2xl border bg-muted/40 p-4 text-sm text-muted-foreground">
