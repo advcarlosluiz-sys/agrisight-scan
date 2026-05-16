@@ -583,3 +583,67 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
+
+function SortablePhoto({
+  foto,
+  url,
+  label,
+  posicao,
+  canDrag,
+  onRemove,
+}: {
+  foto: FotoRow;
+  url: string | undefined;
+  label: string;
+  posicao: number;
+  canDrag: boolean;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: foto.id,
+    disabled: !canDrag,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.85 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="relative aspect-square overflow-hidden rounded-xl border bg-muted touch-none"
+    >
+      {url ? (
+        <img src={url} alt={`Foto ${label}`} className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      <span className="absolute left-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+        {posicao}
+      </span>
+      {canDrag && (
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          aria-label="Arrastar para reordenar"
+          className="absolute bottom-1 left-1 cursor-grab rounded-full bg-black/60 p-1 text-white shadow-sm hover:bg-black/80 active:cursor-grabbing"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Remover foto"
+        className="absolute right-1 top-1 rounded-full bg-destructive/90 p-1 text-destructive-foreground shadow-sm hover:bg-destructive"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
