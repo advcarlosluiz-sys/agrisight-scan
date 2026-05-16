@@ -23,6 +23,10 @@ const TIPOS = [
   { key: "plastico", label: "Plástico/Túnel" },
 ] as const;
 
+// Limite de fotos por tipo. Mantém o custo da IA previsível e evita
+// estourar o tamanho do payload enviado para a Edge Function.
+const MAX_POR_TIPO = 8;
+
 type TipoKey = (typeof TIPOS)[number]["key"];
 type FotoRow = { id: string; tipo_foto: TipoKey; storage_path: string };
 type UploadStatus = "enviando" | "concluido" | "erro";
@@ -91,6 +95,13 @@ function ColetaPage() {
   }, [fotos]);
 
   const fotosPorTipo = (tipo: TipoKey) => (fotos ?? []).filter((f) => f.tipo_foto === tipo);
+
+  // Conta tudo que já "ocupa vaga" para o tipo: salvas + em upload ativo + na fila offline.
+  const ocupadasPorTipo = (tipo: TipoKey) =>
+    fotosPorTipo(tipo).length +
+    uploads.filter((u) => u.tipo === tipo && u.status !== "erro").length +
+    pendingDaInspecao.filter((p) => p.tipo_foto === tipo).length;
+  const restantePorTipo = (tipo: TipoKey) => Math.max(0, MAX_POR_TIPO - ocupadasPorTipo(tipo));
 
   // Quando há itens na fila desta inspeção, faz polling leve para atualizar a grade
   // assim que a fila concluir o envio.
@@ -282,6 +293,8 @@ function ColetaPage() {
           const isUploading = tipoUploads.some((u) => u.status === "enviando");
           const concluidos = tipoUploads.filter((u) => u.status === "concluido").length;
           const erros = tipoUploads.filter((u) => u.status === "erro").length;
+          const restante = restantePorTipo(t.key);
+          const noLimite = restante === 0;
 
           return (
             <div key={t.key} className="rounded-2xl border bg-card p-3">
@@ -289,8 +302,16 @@ function ColetaPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Camera className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">{t.label}</span>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                    {lista.length} {lista.length === 1 ? "foto" : "fotos"}
+                  <span
+                    className={
+                      "rounded-full px-2 py-0.5 text-[11px] " +
+                      (noLimite
+                        ? "bg-amber-500/15 font-medium text-amber-700 dark:text-amber-400"
+                        : "bg-muted text-muted-foreground")
+                    }
+                    aria-label={`${lista.length} de ${MAX_POR_TIPO} fotos`}
+                  >
+                    {lista.length}/{MAX_POR_TIPO}
                   </span>
                   {isUploading && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
@@ -314,10 +335,25 @@ function ColetaPage() {
                   variant="outline"
                   className="h-8 px-2 text-xs"
                   onClick={() => triggerInput(t.key)}
+                  disabled={noLimite}
+                  title={noLimite ? `Limite de ${MAX_POR_TIPO} fotos atingido` : undefined}
                 >
                   <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar
                 </Button>
               </div>
+
+              {noLimite && (
+                <div
+                  role="status"
+                  className="mb-2 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                  <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                  <span>
+                    Limite de {MAX_POR_TIPO} fotos atingido neste tipo. Remova alguma para adicionar
+                    novas.
+                  </span>
+                </div>
+              )}
 
               {tipoUploads.length > 0 && (
                 <div className="mb-2 space-y-1.5">
@@ -411,14 +447,16 @@ function ColetaPage() {
                   );
                 })}
 
-                <button
-                  type="button"
-                  onClick={() => triggerInput(t.key)}
-                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
-                >
-                  <Plus className="h-5 w-5" />
-                  <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
-                </button>
+                {!noLimite && (
+                  <button
+                    type="button"
+                    onClick={() => triggerInput(t.key)}
+                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span>{lista.length === 0 ? "Capturar" : "Mais"}</span>
+                  </button>
+                )}
               </div>
 
               <input
@@ -432,8 +470,22 @@ function ColetaPage() {
                 className="hidden"
                 onChange={(e) => {
                   const files = Array.from(e.target.files ?? []);
-                  files.forEach((f) => upload(t.key, f));
                   e.target.value = "";
+                  const disponivel = restantePorTipo(t.key);
+                  if (disponivel <= 0) {
+                    toast.warning(
+                      `Limite de ${MAX_POR_TIPO} fotos atingido para "${t.label}". Remova alguma para adicionar novas.`,
+                    );
+                    return;
+                  }
+                  const aceitas = files.slice(0, disponivel);
+                  const recusadas = files.length - aceitas.length;
+                  if (recusadas > 0) {
+                    toast.warning(
+                      `Só restavam ${disponivel} vaga${disponivel === 1 ? "" : "s"} em "${t.label}" — ${recusadas} foto${recusadas === 1 ? " foi ignorada" : "s foram ignoradas"}.`,
+                    );
+                  }
+                  aceitas.forEach((f) => upload(t.key, f));
                 }}
               />
             </div>
