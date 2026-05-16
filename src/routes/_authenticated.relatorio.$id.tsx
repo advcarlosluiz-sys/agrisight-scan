@@ -90,16 +90,53 @@ function Relatorio() {
         ["Data", new Date(ip.data_inspecao).toLocaleDateString("pt-BR")],
         ["Status geral", String(ip.status_geral ?? "-")],
         ["Risco", String(ip.risco ?? "-")],
+        ["Status do processo", STATUS_PROC_LABEL[String(ip.status_processo ?? "em_andamento")] ?? "-"],
       ];
+      const rowsBloc = Math.ceil(linhas.length / 2);
+      const blocH = 10 + rowsBloc * 7;
+      doc.setDrawColor(220); doc.setFillColor(248, 250, 252);
+      // re-draw rectangle with dynamic height (overrides earlier draw above)
+      // (the earlier 38mm box stays for backward compatibility; we just write rows here)
       linhas.forEach((l, i) => {
         const col = i % 2;
         const row = Math.floor(i / 2);
         const cx = 18 + col * ((W - 32) / 2);
         const cy = y + 7 + row * 7;
         doc.setTextColor(110); doc.text(`${l[0]}:`, cx, cy);
-        doc.setTextColor(0); doc.text(l[1], cx + 28, cy, { maxWidth: (W - 32) / 2 - 30 });
+        doc.setTextColor(0); doc.text(l[1], cx + 38, cy, { maxWidth: (W - 32) / 2 - 40 });
       });
-      y += 44;
+      y += Math.max(44, blocH + 6);
+
+      // ---------- HISTÓRICO DO PROCESSO ----------
+      const eventos = buildHistorico(ip, analise as any, id);
+      if (eventos.length > 0) {
+        if (y > H - 40) { doc.addPage(); y = 18; }
+        doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(0);
+        doc.text("Histórico do processo", 14, y); y += 6;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+        eventos.forEach((ev) => {
+          if (y > H - 18) { doc.addPage(); y = 18; }
+          // bullet colorido
+          doc.setFillColor(ev.cor[0], ev.cor[1], ev.cor[2]);
+          doc.circle(16, y - 1.2, 1.4, "F");
+          doc.setTextColor(110);
+          doc.text(ev.quando, 20, y);
+          doc.setTextColor(0); doc.setFont("helvetica", "bold");
+          doc.text(ev.titulo, 60, y);
+          doc.setFont("helvetica", "normal");
+          y += 4.5;
+          if (ev.detalhe) {
+            const linhasDet = doc.splitTextToSize(ev.detalhe, W - 28 - 6);
+            doc.setTextColor(80);
+            doc.text(linhasDet, 20, y);
+            doc.setTextColor(0);
+            y += linhasDet.length * 4.2 + 1.5;
+          } else {
+            y += 1;
+          }
+        });
+        y += 4;
+      }
 
       // ---------- GRÁFICO + MAPA ----------
       if (chart.length > 0 || (setores && setores.length > 0)) {
