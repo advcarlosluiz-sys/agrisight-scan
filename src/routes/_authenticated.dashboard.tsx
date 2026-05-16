@@ -84,6 +84,23 @@ function Dashboard() {
       lastPage.length < PAGE_SIZE ? undefined : allPages.length,
   });
   const inspecoes = (inspecoesPages?.pages ?? []).flat();
+
+  // Auto-load ao rolar até o sentinel
+  const sentinelaRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelaRef.current;
+    if (!el || !hasNextPage) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
   // Contagem agregada por status_processo considerando TODAS as inspeções
   // da organização (RLS já restringe), não apenas as últimas 20.
   const { data: statusTotais } = useQuery({
