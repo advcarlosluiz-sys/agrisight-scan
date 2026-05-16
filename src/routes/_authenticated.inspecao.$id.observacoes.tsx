@@ -258,5 +258,6 @@ function ObsPage() {
           </>
         );
       })()}
+    </AppShell>
   );
 }
