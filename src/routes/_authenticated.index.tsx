@@ -16,7 +16,7 @@ import { AppShell } from "@/components/app-shell";
 import { ConnectionBanner } from "@/components/connection-banner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { usePendingPhotos } from "@/lib/use-sync-queue";
+
 import { useConnection } from "@/lib/use-online";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -119,6 +119,13 @@ function HomePage() {
 
 function SyncCard({ offline, pendentes }: { offline: boolean; pendentes: number }) {
   const [running, setRunning] = useState(false);
+  const { cancelling } = useSyncQueueState();
+
+  const handleCancel = () => {
+    const ok = cancelSync();
+    if (ok) toast.message("Cancelando sincronização…", { description: "O envio atual será concluído e a fila parará." });
+  };
+
   const handleSync = async () => {
     if (offline) {
       toast.error("Você está offline", {
@@ -135,6 +142,9 @@ function SyncCard({ offline, pendentes }: { offline: boolean; pendentes: number 
     toast.promise(p, {
       loading: `Enviando ${pendentes} item${pendentes > 1 ? "s" : ""}…`,
       success: (r) => {
+        if (r.cancelado) {
+          return `Cancelado — ${r.enviados} enviado${r.enviados !== 1 ? "s" : ""}, ${r.restantes} na fila`;
+        }
         if (r.falhas === 0 && r.restantes === 0) {
           return `${r.enviados} item${r.enviados !== 1 ? "s" : ""} sincronizado${r.enviados !== 1 ? "s" : ""}`;
         }
@@ -156,7 +166,7 @@ function SyncCard({ offline, pendentes }: { offline: boolean; pendentes: number 
   };
 
   const temPendentes = pendentes > 0;
-  const destacar = temPendentes; // CTA primário quando há fila
+  const destacar = temPendentes;
   return (
     <div
       className={`flex items-center gap-4 rounded-2xl border p-4 shadow-card ${
@@ -173,27 +183,32 @@ function SyncCard({ offline, pendentes }: { offline: boolean; pendentes: number 
       <div className="flex-1 text-left">
         <div className="font-semibold">Sincronizar Dados</div>
         <div className="text-xs text-muted-foreground">
-          {temPendentes
-            ? `${pendentes} pendente${pendentes > 1 ? "s" : ""}${offline ? " · aguardando conexão" : " · pronto pra enviar"}`
-            : "Tudo enviado"}
+          {cancelling
+            ? "Cancelando…"
+            : temPendentes
+              ? `${pendentes} pendente${pendentes > 1 ? "s" : ""}${offline ? " · aguardando conexão" : " · pronto pra enviar"}`
+              : "Tudo enviado"}
         </div>
       </div>
       <div className="flex flex-col items-end gap-1">
-        <button
-          type="button"
-          onClick={handleSync}
-          disabled={running}
-          className="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
-          title={
-            offline
-              ? "Sem conexão — toque para verificar"
-              : temPendentes
-                ? "Enviar agora"
-                : "Nada pendente"
-          }
-        >
-          {running ? "Enviando…" : "Sincronizar"}
-        </button>
+        {running ? (
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="rounded-full bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground disabled:opacity-50"
+          >
+            {cancelling ? "Cancelando…" : "Cancelar"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSync}
+            className="rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+          >
+            Sincronizar
+          </button>
+        )}
         <Link to="/sincronizacao" className="text-[11px] text-muted-foreground underline underline-offset-2">
           Ver fila
         </Link>
