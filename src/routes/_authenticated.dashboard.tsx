@@ -42,6 +42,17 @@ function Dashboard() {
     queryFn: async () =>
       (await supabase.from("inspecoes").select("id, status_geral, status_processo, data_inspecao, setor:setor_id(codigo)").order("created_at", { ascending: false }).limit(20)).data ?? [],
   });
+  // Contagem agregada por status_processo considerando TODAS as inspeções
+  // da organização (RLS já restringe), não apenas as últimas 20.
+  const { data: statusTotais } = useQuery({
+    queryKey: ["dash-inspecoes-status"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("inspecoes")
+        .select("status_processo");
+      return (data ?? []) as { status_processo: StatusProcesso }[];
+    },
+  });
   const { data: setores } = useQuery({
     queryKey: ["dash-setores"],
     queryFn: async () =>
@@ -57,8 +68,8 @@ function Dashboard() {
   const cnt = (s: string) => inspecoes?.filter((i: any) => i.status_geral === s).length ?? 0;
   const cntProc = (f: Filtro) =>
     f === "todos"
-      ? inspecoes?.length ?? 0
-      : (inspecoes ?? []).filter((i: any) => i.status_processo === f).length;
+      ? statusTotais?.length ?? 0
+      : (statusTotais ?? []).filter((i) => i.status_processo === f).length;
   const inspecoesFiltradas =
     filtro === "todos" ? inspecoes ?? [] : (inspecoes ?? []).filter((i: any) => i.status_processo === filtro);
 
