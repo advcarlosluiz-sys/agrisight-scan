@@ -152,11 +152,43 @@ function AnalisandoPage() {
       // Se a análise já foi concluída (ex.: outra aba), pula direto p/ resultado.
       const { data: insp } = await supabase
         .from("inspecoes")
-        .select("status_processo")
+        .select("status_processo, organizacao_id")
         .eq("id", id)
         .maybeSingle();
       if (canceladoRef.current) return;
       const sp = insp?.status_processo as string | undefined;
+      const orgId = (insp?.organizacao_id as string | undefined) ?? null;
+
+      // Registra cada tentativa (sucesso, falha ou fallback) na tabela de
+      // histórico — fire-and-forget, nunca quebra o fluxo principal.
+      const logarTentativa = async (registro: {
+        tentativa: number;
+        sucesso: boolean;
+        degradado?: boolean;
+        degradado_codigo?: string | null;
+        degradado_detalhe?: string | null;
+        http_status?: number | null;
+        duracao_ms?: number | null;
+        erro_mensagem?: string | null;
+      }) => {
+        if (!orgId) return;
+        try {
+          await supabase.from("tentativas_analise_ia").insert({
+            organizacao_id: orgId,
+            inspecao_id: id,
+            tentativa: registro.tentativa,
+            sucesso: registro.sucesso,
+            degradado: registro.degradado ?? false,
+            degradado_codigo: registro.degradado_codigo ?? null,
+            degradado_detalhe: registro.degradado_detalhe ?? null,
+            http_status: registro.http_status ?? null,
+            duracao_ms: registro.duracao_ms ?? null,
+            erro_mensagem: registro.erro_mensagem ?? null,
+          });
+        } catch {
+          // ignora — log é auxiliar
+        }
+      };
       if (sp === "concluida") {
         navigate({ to: "/inspecao/$id/resultado", params: { id }, replace: true });
         return;
