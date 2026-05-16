@@ -83,18 +83,26 @@ function AnalisandoPage() {
   const navigate = useNavigate();
   const [progresso, setProgresso] = useState(8);
   const [etapa, setEtapa] = useState(0);
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useState<ErroDetalhado | null>(null);
+  const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
   const [fotos, setFotos] = useState<FotoItem[]>([]);
   const ranRef = useRef(false);
+  const executandoRef = useRef(false);
   const canceladoRef = useRef(false);
   const statusProcesso = useStatusProcesso(id);
 
   const marcarStatus = (fotoId: string, status: FotoStatus) =>
     setFotos((prev) => prev.map((f) => (f.id === fotoId ? { ...f, status } : f)));
 
-  useEffect(() => {
-    if (ranRef.current) return;
-    ranRef.current = true;
+  const executar = useCallback(async () => {
+    if (executandoRef.current) return;
+    executandoRef.current = true;
+    canceladoRef.current = false;
+    setErro(null);
+    setMostrarDetalhes(false);
+    setProgresso(8);
+    setEtapa(0);
+    setFotos([]);
 
     const tickProg = setInterval(() => {
       setProgresso((p) => (p < 92 ? p + Math.max(1, Math.round((95 - p) / 18)) : p));
@@ -103,131 +111,132 @@ function AnalisandoPage() {
       setEtapa((e) => (e < ETAPAS.length - 1 ? e + 1 : e));
     }, 1800);
 
-    (async () => {
-      try {
-        // Se a análise já foi concluída (ex.: outra aba), pula direto p/ resultado.
-        const { data: insp } = await supabase
-          .from("inspecoes")
-          .select("status_processo")
-          .eq("id", id)
-          .maybeSingle();
-        if (canceladoRef.current) return;
-        const sp = insp?.status_processo as string | undefined;
-        if (sp === "concluida") {
-          navigate({ to: "/inspecao/$id/resultado", params: { id }, replace: true });
-          return;
-        }
-        if (sp === "cancelada") {
-          navigate({ to: "/inspecao/$id/observacoes", params: { id }, replace: true });
-          return;
-        }
-        // Garante o marcador "analisando" (útil quando entramos via reload direto).
-        if (sp !== "analisando") {
-          await supabase
-            .from("inspecoes")
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .update({ status_processo: "analisando" } as any)
-            .eq("id", id);
-        }
-
-        // Carrega lista de fotos da inspeção e gera URLs assinadas em paralelo,
-        // marcando cada uma como "carregada" assim que sua URL fica disponível.
-        const { data: fotosRows, error: fotosErr } = await supabase
-          .from("fotos_inspecao")
-          .select("id, legenda, storage_path, created_at")
-          .eq("inspecao_id", id)
-          .order("created_at", { ascending: true });
-        if (fotosErr) throw fotosErr;
-        if (!fotosRows || fotosRows.length < 1) {
-          await supabase
-            .from("inspecoes")
-            .update({ status_processo: "em_andamento" })
-            .eq("id", id);
-          throw new Error("Inspeção sem fotos. Volte e adicione ao menos 1 foto antes de analisar.");
-        }
-
-        const lista: FotoItem[] = fotosRows.map((r) => ({
-          id: r.id as string,
-          legenda: (r.legenda as string | null) ?? null,
-          url: null,
-          status: "pendente",
-        }));
-        setFotos(lista);
-
-        await Promise.all(
-          fotosRows.map(async (r) => {
-            const { data: signed } = await supabase.storage
-              .from("inspection-photos")
-              .createSignedUrl(r.storage_path as string, 600);
-            if (canceladoRef.current) return;
-            setFotos((prev) =>
-              prev.map((f) =>
-                f.id === r.id
-                  ? { ...f, url: signed?.signedUrl ?? null, status: "carregada" }
-                  : f,
-              ),
-            );
-          }),
-        );
-
-        // Marcação progressiva de "enviada" enquanto a IA processa em lote.
-        const passo = Math.max(450, Math.min(1400, Math.round(7000 / lista.length)));
-        let idx = 0;
-        const tickEnvio = setInterval(() => {
-          if (canceladoRef.current || idx >= lista.length) {
-            clearInterval(tickEnvio);
-            return;
-          }
-          marcarStatus(lista[idx].id, "enviada");
-          idx += 1;
-        }, passo);
-
-        type RespIA = { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown };
-        let resp: RespIA | null = null;
-        try {
-          const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
-            body: { inspecao_id: id, mode: "preview" },
-          });
-          if (canceladoRef.current) return;
-          if (error) throw error;
-          resp = data as RespIA;
-        } finally {
-          clearInterval(tickEnvio);
-        }
-
-        if (resp?.error) throw new Error(resp.error);
-        if (!resp?.preview) throw new Error("Resposta da IA sem preview");
-
-        // Garante que todas aparecem como enviadas ao final.
-        setFotos((prev) => prev.map((f) => ({ ...f, status: "enviada" })));
-        setProgresso(100);
-        setEtapa(ETAPAS.length - 1);
-        try {
-          sessionStorage.setItem(
-            `preview-ia:${id}`,
-            JSON.stringify({ preview: resp.preview, degradado: resp.degradado ?? null, fotos: resp.fotos ?? null, ts: Date.now() }),
-          );
-        } catch {
-          // ignora — preview ainda pode ser exibida via state se disponível
-        }
-        toast.success("Pré-visualização pronta — revise antes de salvar");
-        setTimeout(() => {
-          if (!canceladoRef.current) navigate({ to: "/inspecao/$id/preview-ia", params: { id } });
-        }, 350);
-      } catch (e) {
-        if (canceladoRef.current) return;
-        setErro(e instanceof Error ? e.message : "Erro na análise");
-      } finally {
-        clearInterval(tickProg);
-        clearInterval(tickEtapa);
+    try {
+      // Se a análise já foi concluída (ex.: outra aba), pula direto p/ resultado.
+      const { data: insp } = await supabase
+        .from("inspecoes")
+        .select("status_processo")
+        .eq("id", id)
+        .maybeSingle();
+      if (canceladoRef.current) return;
+      const sp = insp?.status_processo as string | undefined;
+      if (sp === "concluida") {
+        navigate({ to: "/inspecao/$id/resultado", params: { id }, replace: true });
+        return;
       }
-    })();
+      if (sp === "cancelada") {
+        navigate({ to: "/inspecao/$id/observacoes", params: { id }, replace: true });
+        return;
+      }
+      // Garante o marcador "analisando" (útil quando entramos via reload direto).
+      if (sp !== "analisando") {
+        await supabase
+          .from("inspecoes")
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .update({ status_processo: "analisando" } as any)
+          .eq("id", id);
+      }
 
-    return () => {
+      // Carrega lista de fotos da inspeção e gera URLs assinadas em paralelo,
+      // marcando cada uma como "carregada" assim que sua URL fica disponível.
+      const { data: fotosRows, error: fotosErr } = await supabase
+        .from("fotos_inspecao")
+        .select("id, legenda, storage_path, created_at")
+        .eq("inspecao_id", id)
+        .order("created_at", { ascending: true });
+      if (fotosErr) throw fotosErr;
+      if (!fotosRows || fotosRows.length < 1) {
+        await supabase
+          .from("inspecoes")
+          .update({ status_processo: "em_andamento" })
+          .eq("id", id);
+        throw new Error("Inspeção sem fotos. Volte e adicione ao menos 1 foto antes de analisar.");
+      }
+
+      const lista: FotoItem[] = fotosRows.map((r) => ({
+        id: r.id as string,
+        legenda: (r.legenda as string | null) ?? null,
+        url: null,
+        status: "pendente",
+      }));
+      setFotos(lista);
+
+      await Promise.all(
+        fotosRows.map(async (r) => {
+          const { data: signed } = await supabase.storage
+            .from("inspection-photos")
+            .createSignedUrl(r.storage_path as string, 600);
+          if (canceladoRef.current) return;
+          setFotos((prev) =>
+            prev.map((f) =>
+              f.id === r.id
+                ? { ...f, url: signed?.signedUrl ?? null, status: "carregada" }
+                : f,
+            ),
+          );
+        }),
+      );
+
+      // Marcação progressiva de "enviada" enquanto a IA processa em lote.
+      const passo = Math.max(450, Math.min(1400, Math.round(7000 / lista.length)));
+      let idx = 0;
+      const tickEnvio = setInterval(() => {
+        if (canceladoRef.current || idx >= lista.length) {
+          clearInterval(tickEnvio);
+          return;
+        }
+        marcarStatus(lista[idx].id, "enviada");
+        idx += 1;
+      }, passo);
+
+      type RespIA = { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown };
+      let resp: RespIA | null = null;
+      try {
+        const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
+          body: { inspecao_id: id, mode: "preview" },
+        });
+        if (canceladoRef.current) return;
+        if (error) throw error;
+        resp = data as RespIA;
+      } finally {
+        clearInterval(tickEnvio);
+      }
+
+      if (resp?.error) throw new Error(resp.error);
+      if (!resp?.preview) throw new Error("Resposta da IA sem preview");
+
+      // Garante que todas aparecem como enviadas ao final.
+      setFotos((prev) => prev.map((f) => ({ ...f, status: "enviada" })));
+      setProgresso(100);
+      setEtapa(ETAPAS.length - 1);
+      try {
+        sessionStorage.setItem(
+          `preview-ia:${id}`,
+          JSON.stringify({ preview: resp.preview, degradado: resp.degradado ?? null, fotos: resp.fotos ?? null, ts: Date.now() }),
+        );
+      } catch {
+        // ignora — preview ainda pode ser exibida via state se disponível
+      }
+      toast.success("Pré-visualização pronta — revise antes de salvar");
+      setTimeout(() => {
+        if (!canceladoRef.current) navigate({ to: "/inspecao/$id/preview-ia", params: { id } });
+      }, 350);
+    } catch (e) {
+      if (canceladoRef.current) return;
+      const detalhe = await extrairErroEdge(e);
+      setErro(detalhe);
+    } finally {
       clearInterval(tickProg);
       clearInterval(tickEtapa);
-    };
+      executandoRef.current = false;
+    }
   }, [id, navigate]);
+
+  useEffect(() => {
+    if (ranRef.current) return;
+    ranRef.current = true;
+    void executar();
+  }, [executar]);
 
   const cancelar = async () => {
     canceladoRef.current = true;
