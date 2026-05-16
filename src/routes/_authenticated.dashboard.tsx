@@ -87,8 +87,11 @@ function Dashboard() {
   const { data: tarefas } = useQuery({
     queryKey: ["dash-tarefas"],
     queryFn: async () =>
-      (await supabase.from("tarefas_recomendadas").select("id, titulo, prioridade, status").eq("status", "pendente").limit(5)).data ?? [],
+      (await supabase.from("tarefas_recomendadas").select("id, titulo, prioridade, status, inspecao_id, inspecao:inspecao_id(status_processo)").eq("status", "pendente")).data ?? [],
   });
+  const tarefasFiltradas = (tarefas ?? []).filter((t: any) =>
+    filtro === "todos" ? true : t.inspecao?.status_processo === filtro,
+  ).slice(0, 5);
 
   const total = inspecoes?.length ?? 0;
   const cnt = (s: string) => inspecoes?.filter((i: any) => i.status_geral === s).length ?? 0;
@@ -218,11 +221,13 @@ function Dashboard() {
         )}
       </div>
 
-      {tarefas && tarefas.length > 0 && (
+      {tarefasFiltradas.length > 0 && (
         <>
-          <h3 className="mt-5 mb-2 text-sm font-semibold">Tarefas recomendadas</h3>
+          <h3 className="mt-5 mb-2 text-sm font-semibold">
+            Tarefas recomendadas{filtro !== "todos" ? ` · ${FILTROS.find((f) => f.id === filtro)?.label}` : ""}
+          </h3>
           <div className="space-y-2">
-            {tarefas.map((t: any) => (
+            {tarefasFiltradas.map((t: any) => (
               <div key={t.id} className="rounded-xl border bg-card p-3 text-sm">
                 <p className="font-medium">{t.titulo}</p>
                 <p className="text-xs capitalize text-muted-foreground">Prioridade: {t.prioridade}</p>
