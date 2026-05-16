@@ -230,7 +230,34 @@ function Dashboard() {
       </div>
       <div className="space-y-2">
         {inspecoesFiltradas.length === 0 && (
-          <p className="text-sm text-muted-foreground">Nenhuma inspeção neste filtro.</p>
+          <div className="rounded-2xl border border-dashed bg-card p-5 text-center">
+            <p className="text-sm text-muted-foreground">
+              Nenhuma inspeção {filtro !== "todos" || q ? "para os filtros atuais" : "ainda"}.
+            </p>
+            {(filtro !== "todos" || q) && (
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFiltro("todos");
+                    setQ("");
+                  }}
+                  className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-card active:scale-[0.98]"
+                >
+                  Limpar filtros e ver todas
+                </button>
+                {filtro !== "todos" && (
+                  <button
+                    type="button"
+                    onClick={() => setFiltro("todos")}
+                    className="rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-foreground active:scale-[0.98]"
+                  >
+                    Voltar para “Todos”
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         )}
         {inspecoesFiltradas.map((i: any) => (
           <div key={i.id} className="rounded-xl border bg-card p-3">
