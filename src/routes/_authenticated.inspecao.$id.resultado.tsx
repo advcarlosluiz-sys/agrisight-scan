@@ -60,6 +60,49 @@ function ResultadoPage() {
       ).data,
   });
 
+  const tarefasQK = ["tarefas-inspecao", id] as const;
+  const { data: tarefas, isLoading: tarefasLoading } = useQuery({
+    queryKey: tarefasQK,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tarefas_recomendadas")
+        .select("id, titulo, descricao, prioridade, status, prazo, created_at")
+        .eq("inspecao_id", id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const rows = (data ?? []) as (Tarefa & { created_at: string })[];
+      return rows.sort((a, b) => {
+        const pa = PRIO_ORDER[a.prioridade] ?? 99;
+        const pb = PRIO_ORDER[b.prioridade] ?? 99;
+        if (pa !== pb) return pa - pb;
+        return a.created_at.localeCompare(b.created_at);
+      });
+    },
+  });
+
+  const toggleTarefa = useMutation({
+    mutationFn: async ({ id: tid, concluida }: { id: string; concluida: boolean }) => {
+      const { error } = await supabase
+        .from("tarefas_recomendadas")
+        .update({ status: concluida ? "concluida" : "pendente" })
+        .eq("id", tid);
+      if (error) throw error;
+    },
+    onMutate: async ({ id: tid, concluida }) => {
+      await queryClient.cancelQueries({ queryKey: tarefasQK });
+      const prev = queryClient.getQueryData<Tarefa[]>(tarefasQK);
+      queryClient.setQueryData<Tarefa[]>(tarefasQK, (old) =>
+        (old ?? []).map((t) => (t.id === tid ? { ...t, status: concluida ? "concluida" : "pendente" } : t)),
+      );
+      return { prev };
+    },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(tarefasQK, ctx.prev);
+      toast.error(err instanceof Error ? err.message : "Erro ao atualizar tarefa");
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: tarefasQK }),
+  });
+
   if (isLoading) return <AppShell title="Resultado IA" back="/"><p>Carregando...</p></AppShell>;
   if (!data) return <AppShell title="Resultado IA" back="/"><p className="text-muted-foreground">Sem análise disponível.</p></AppShell>;
 
