@@ -281,6 +281,12 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
     // === Modo SAVE: normaliza o JSON revisado pelo usuário e persiste ===
     parsed = normalizar(body.analise);
 
+    // Em SAVE, a chamada à IA já ocorreu em preview; recebemos os metadados
+    // de fallback do cliente para preservá-los junto da análise.
+    const saveDegradado = typeof body.degradado === "string" ? body.degradado : null;
+    const saveDegradadoCodigo = typeof body.degradado_codigo === "string" ? body.degradado_codigo : null;
+    const saveDegradadoDetalhe = typeof body.degradado_detalhe === "string" ? body.degradado_detalhe : null;
+    const saveFotosFalhadas = typeof body.fotos_falhadas === "number" ? body.fotos_falhadas : fotosFalhadas;
 
     // 7. Persistir análise
     const { data: analise, error: aErr } = await admin
@@ -288,7 +294,7 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
       .insert({
         organizacao_id: inspecao.organizacao_id,
         inspecao_id,
-        modelo_ia: aiDegradado ? `${MODELO_IA} (fallback)` : MODELO_IA,
+        modelo_ia: saveDegradado ? `${MODELO_IA} (fallback)` : MODELO_IA,
         prompt_versao: PROMPT_VERSAO,
         prompt_system: systemPrompt,
         prompt_user: userText,
@@ -301,7 +307,13 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
         justificativa: parsed.justificativa,
         necessidade_agronomo: parsed.necessidade_agronomo,
         prioridade: parsed.prioridade,
-        resposta_completa: { ...parsed, _degradado: aiDegradado, _fotos_falhadas: fotosFalhadas },
+        resposta_completa: {
+          ...parsed,
+          _degradado: saveDegradado,
+          _degradado_codigo: saveDegradadoCodigo,
+          _degradado_detalhe: saveDegradadoDetalhe,
+          _fotos_falhadas: saveFotosFalhadas,
+        },
       })
       .select()
       .single();
