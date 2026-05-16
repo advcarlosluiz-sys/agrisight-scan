@@ -12,6 +12,7 @@ import { AcoesPorStatus } from "@/components/acoes-por-status";
 import { FiltroStatusIndicador } from "@/components/filtro-status-indicador";
 import { supabase } from "@/integrations/supabase/client";
 import { usePersistedFilter } from "@/hooks/use-persisted-filter";
+import { useInvalidFiltroToast } from "@/hooks/use-invalid-filtro-toast";
 import { cn } from "@/lib/utils";
 
 type Filtro = "todos" | StatusProcesso;
