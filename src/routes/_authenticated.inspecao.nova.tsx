@@ -1,12 +1,13 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StatusProcessoBadge, type StatusProcesso } from "@/components/status-processo-badge";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/inspecao/nova")({
@@ -37,6 +38,43 @@ function NovaInspecao() {
     queryFn: async () =>
       (await supabase.from("canteiros").select("id, nome, variedade").eq("propriedade_id", propriedadeId).order("nome")).data ?? [],
   });
+
+  // Inspeções recentes — exibidas com badge ao vivo para acompanhar
+  // transições (em_andamento → analisando → concluída/cancelada).
+  type InspecaoRecente = {
+    id: string;
+    data_inspecao: string;
+    status_processo: StatusProcesso;
+    setor: { codigo: string | null } | null;
+  };
+  const queryClient = useQueryClient();
+  const { data: recentes } = useQuery({
+    queryKey: ["nova-inspecao-recentes"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("inspecoes")
+        .select("id, data_inspecao, status_processo, setor:setor_id(codigo)")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      return (data ?? []) as unknown as InspecaoRecente[];
+    },
+  });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("nova-inspecao-recentes-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "inspecoes" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["nova-inspecao-recentes"] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const iniciar = async () => {
     if (!canteiroId) return toast.error("Selecione canteiro");
@@ -98,6 +136,45 @@ function NovaInspecao() {
         <Button className="h-12 w-full text-base" onClick={iniciar} disabled={busy || !canteiroId}>
           Iniciar Inspeção
         </Button>
+      </div>
+
+      <div className="mt-6">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Inspeções recentes
+          </h3>
+          <span className="text-[10px] text-muted-foreground">Atualiza em tempo real</span>
+        </div>
+        {recentes && recentes.length > 0 ? (
+          <div className="space-y-2">
+            {recentes.map((r) => {
+              const destino =
+                r.status_processo === "analisando"
+                  ? ("/inspecao/$id/analisando" as const)
+                  : r.status_processo === "concluida"
+                  ? ("/inspecao/$id/resultado" as const)
+                  : ("/inspecao/$id/observacoes" as const);
+              return (
+                <Link
+                  key={r.id}
+                  to={destino}
+                  params={{ id: r.id }}
+                  className="flex items-center justify-between gap-2 rounded-xl border bg-card p-3 transition active:scale-[0.99]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm">
+                      Setor {r.setor?.codigo ?? "—"} ·{" "}
+                      {new Date(r.data_inspecao).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  <StatusProcessoBadge status={r.status_processo} />
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Ainda não há inspeções recentes.</p>
+        )}
       </div>
     </AppShell>
   );
