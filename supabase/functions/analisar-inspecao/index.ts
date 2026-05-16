@@ -210,6 +210,8 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
           const txt = await safeText(aiResp);
           console.error("AI error", aiResp.status, txt);
           aiDegradado = `IA retornou ${aiResp.status}`;
+          aiDegradadoCodigo = aiResp.status >= 500 ? "http_5xx" : "http_4xx";
+          aiDegradadoDetalhe = `HTTP ${aiResp.status} — ${txt.slice(0, 800)}`;
         } else {
           const aiJson = await aiResp.json().catch((e) => {
             console.error("Falha ao parsear JSON da resposta IA:", e);
@@ -218,6 +220,8 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
           const raw = aiJson?.choices?.[0]?.message?.content;
           if (!raw) {
             aiDegradado = "Resposta da IA vazia";
+            aiDegradadoCodigo = "resposta_vazia";
+            aiDegradadoDetalhe = "Resposta sem choices[0].message.content";
           } else {
             try {
               const obj = typeof raw === "string" ? JSON.parse(raw) : raw;
@@ -225,11 +229,14 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
             } catch (e) {
               console.error("Falha ao parsear conteúdo IA:", e, "raw:", String(raw).slice(0, 500));
               aiDegradado = "Resposta da IA não é JSON válido";
+              aiDegradadoCodigo = "json_invalido";
+              aiDegradadoDetalhe = `${(e as Error)?.message ?? "erro de parse"} — trecho: ${String(raw).slice(0, 500)}`;
             }
           }
         }
       } catch (e) {
         const name = (e as Error)?.name;
+        const msg = (e as Error)?.message ?? String(e);
         const clientAborted = req.signal.aborted || name === "ClientAbortError";
         const timedOut = name === "TimeoutError";
         if (clientAborted) {
@@ -239,6 +246,8 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
         }
         console.error(timedOut ? "Timeout da IA" : "Erro de rede com IA:", e);
         aiDegradado = timedOut ? "Tempo limite da IA excedido" : "Falha de rede com a IA";
+        aiDegradadoCodigo = timedOut ? "timeout" : "rede";
+        aiDegradadoDetalhe = `${name ?? "Error"}: ${msg.slice(0, 800)}`;
       } finally {
         clearTimeout(timer);
         req.signal.removeEventListener("abort", onClientAbort);
@@ -247,6 +256,7 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
       // 6. Fallback heurístico se IA falhou
       if (!parsed) {
         parsed = fallbackHeuristico(checkboxes, semFotos, aiDegradado ?? "IA indisponível");
+        if (!aiDegradadoCodigo) aiDegradadoCodigo = "erro_desconhecido";
       }
 
       // 6b. Retorna preview SEM persistir nada (status_processo permanece em_andamento).
@@ -254,6 +264,8 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
         ok: true,
         preview: parsed,
         degradado: aiDegradado,
+        degradado_codigo: aiDegradadoCodigo,
+        degradado_detalhe: aiDegradadoDetalhe,
         fotos: { total: totalFotos, usadas: imageContents.length, falhadas: fotosFalhadas },
       });
     }
