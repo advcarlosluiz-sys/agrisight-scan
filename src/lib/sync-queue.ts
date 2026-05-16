@@ -5,18 +5,32 @@ const MAX_ATTEMPTS = 8;
 // backoff em ms — 5s, 15s, 60s, 5min, 15min, 30min, 1h, 2h
 const BACKOFFS = [5_000, 15_000, 60_000, 5 * 60_000, 15 * 60_000, 30 * 60_000, 60 * 60_000, 120 * 60_000];
 
-type Listener = (state: { processing: boolean }) => void;
+type Listener = (state: { processing: boolean; cancelling: boolean }) => void;
 const listeners = new Set<Listener>();
 let processing = false;
+let cancelRequested = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
+let pauseUntil = 0; // após cancelar, segura auto-retry por alguns segundos
 
 function emit() {
-  for (const l of listeners) l({ processing });
+  for (const l of listeners) l({ processing, cancelling: cancelRequested });
+}
+
+export function cancelSync() {
+  if (!processing) return false;
+  cancelRequested = true;
+  pauseUntil = Date.now() + 10_000; // 10s sem auto-retry
+  emit();
+  return true;
+}
+
+export function isCancelling() {
+  return cancelRequested;
 }
 
 export function subscribeSyncQueue(l: Listener) {
   listeners.add(l);
-  l({ processing });
+  l({ processing, cancelling: cancelRequested });
   return () => listeners.delete(l);
 }
 
@@ -105,10 +119,13 @@ export function scheduleProcess(delay = 0) {
 export async function processQueue() {
   if (processing) return;
   if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  if (Date.now() < pauseUntil) return;
   processing = true;
+  cancelRequested = false;
   emit();
   try {
     while (true) {
+      if (cancelRequested) break;
       const now = Date.now();
       const next = await offlineDB.pendingPhotos
         .where("status")
@@ -146,8 +163,11 @@ export async function processQueue() {
       }
     }
   } finally {
+    const wasCancelled = cancelRequested;
     processing = false;
+    cancelRequested = false;
     emit();
+    if (wasCancelled) return; // não reagenda — usuário pediu para parar
     // se ainda há itens pendentes futuros, agenda
     const upcoming = await offlineDB.pendingPhotos
       .where("status")
@@ -163,21 +183,19 @@ export interface SyncResult {
   enviados: number;
   falhas: number;
   restantes: number;
+  cancelado: boolean;
 }
 
 /**
  * Força sincronização imediata (ignora backoff) e retorna o resultado agregado.
- * Útil para o botão "Sincronizar agora" com feedback ao usuário.
  */
 export async function syncNow(): Promise<SyncResult> {
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     throw new Error("Sem conexão com a internet");
   }
-  // espera processamento atual terminar
   while (processing) {
     await new Promise((r) => setTimeout(r, 100));
   }
-  // reagenda todos os pendentes para agora (ignora backoff)
   const all = await offlineDB.pendingPhotos.where("status").notEqual("enviando").toArray();
   await offlineDB.pendingPhotos.bulkPut(
     all.map((p) => ({
@@ -191,9 +209,15 @@ export async function syncNow(): Promise<SyncResult> {
   let enviados = 0;
   let falhas = 0;
   processing = true;
+  cancelRequested = false;
   emit();
+  let cancelado = false;
   try {
     while (true) {
+      if (cancelRequested) {
+        cancelado = true;
+        break;
+      }
       const next = await offlineDB.pendingPhotos.where("status").equals("pendente").first();
       if (!next) break;
       await offlineDB.pendingPhotos.update(next.id, { status: "enviando", last_error: undefined });
@@ -218,10 +242,11 @@ export async function syncNow(): Promise<SyncResult> {
     }
   } finally {
     processing = false;
+    cancelRequested = false;
     emit();
   }
   const restantes = await offlineDB.pendingPhotos.count();
-  return { enviados, falhas, restantes };
+  return { enviados, falhas, restantes, cancelado };
 }
 
 let initialized = false;
@@ -231,10 +256,8 @@ export function initSyncQueue() {
   window.addEventListener("online", () => {
     scheduleProcess(200);
   });
-  // retry leves enquanto a aba estiver aberta
   setInterval(() => {
-    if (navigator.onLine) scheduleProcess(0);
+    if (navigator.onLine && Date.now() >= pauseUntil) scheduleProcess(0);
   }, 30_000);
-  // dispara já no boot
   scheduleProcess(500);
 }

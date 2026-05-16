@@ -16,13 +16,13 @@ export function usePendingPhotos(inspecaoId?: string): PendingPhoto[] {
 }
 
 export function useSyncQueueState() {
-  const [processing, setProcessing] = useState(false);
+  const [state, setState] = useState({ processing: false, cancelling: false });
   useEffect(() => {
     initSyncQueue();
-    const unsub = subscribeSyncQueue((s) => setProcessing(s.processing));
+    const unsub = subscribeSyncQueue((s) => setState(s));
     return () => {
       unsub();
     };
   }, []);
-  return { processing };
+  return state;
 }

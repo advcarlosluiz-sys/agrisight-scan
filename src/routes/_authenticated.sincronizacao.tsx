@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { usePendingPhotos, useSyncQueueState } from "@/lib/use-sync-queue";
 import {
+  cancelSync,
   deletePendingPhoto,
   retryAllPendingPhotos,
   retryPendingPhoto,
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/sincronizacao")({
 
 function SincronizacaoPage() {
   const items = usePendingPhotos();
-  const { processing } = useSyncQueueState();
+  const { processing, cancelling } = useSyncQueueState();
   const online = useOnlineStatus();
 
   const pendentes = items.filter((i) => i.status === "pendente").length;
@@ -78,16 +79,30 @@ function SincronizacaoPage() {
         </div>
 
         <div className="mt-3 flex gap-2">
-          <Button
-            size="sm"
-            className="flex-1"
-            onClick={sincronizarAgora}
-            disabled={!online || processing || items.length === 0}
-          >
-            <RefreshCw className={`mr-1 h-4 w-4 ${processing ? "animate-spin" : ""}`} />
-            Sincronizar agora
-          </Button>
-          {erros > 0 && (
+          {processing ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="flex-1"
+              onClick={() => {
+                if (cancelSync()) toast.message("Cancelando sincronização…");
+              }}
+              disabled={cancelling}
+            >
+              {cancelling ? "Cancelando…" : "Cancelar envio"}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={sincronizarAgora}
+              disabled={!online || items.length === 0}
+            >
+              <RefreshCw className="mr-1 h-4 w-4" />
+              Sincronizar agora
+            </Button>
+          )}
+          {erros > 0 && !processing && (
             <Button size="sm" variant="outline" onClick={tentarTodos}>
               Tentar tudo
             </Button>
