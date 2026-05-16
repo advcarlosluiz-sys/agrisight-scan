@@ -5,8 +5,12 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Sparkles, Loader2, AlertTriangle } from "lucide-react";
+import { Sparkles, Loader2, AlertTriangle, Check, Upload, ImageIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { StatusProcessoBadge, useStatusProcesso } from "@/components/status-processo-badge";
+
+type FotoStatus = "pendente" | "carregada" | "enviada";
+type FotoItem = { id: string; legenda: string | null; url: string | null; status: FotoStatus };
 
 export const Route = createFileRoute("/_authenticated/inspecao/$id/analisando")({
   component: AnalisandoPage,
@@ -26,9 +30,13 @@ function AnalisandoPage() {
   const [progresso, setProgresso] = useState(8);
   const [etapa, setEtapa] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
+  const [fotos, setFotos] = useState<FotoItem[]>([]);
   const ranRef = useRef(false);
   const canceladoRef = useRef(false);
   const statusProcesso = useStatusProcesso(id);
+
+  const marcarStatus = (fotoId: string, status: FotoStatus) =>
+    setFotos((prev) => prev.map((f) => (f.id === fotoId ? { ...f, status } : f)));
 
   useEffect(() => {
     if (ranRef.current) return;
@@ -68,13 +76,15 @@ function AnalisandoPage() {
             .eq("id", id);
         }
 
-        // Salvaguarda: bloqueia análise sem fotos persistidas
-        const { count, error: countErr } = await supabase
+        // Carrega lista de fotos da inspeção e gera URLs assinadas em paralelo,
+        // marcando cada uma como "carregada" assim que sua URL fica disponível.
+        const { data: fotosRows, error: fotosErr } = await supabase
           .from("fotos_inspecao")
-          .select("id", { count: "exact", head: true })
-          .eq("inspecao_id", id);
-        if (countErr) throw countErr;
-        if (!count || count < 1) {
+          .select("id, legenda, storage_path, created_at")
+          .eq("inspecao_id", id)
+          .order("created_at", { ascending: true });
+        if (fotosErr) throw fotosErr;
+        if (!fotosRows || fotosRows.length < 1) {
           await supabase
             .from("inspecoes")
             .update({ status_processo: "em_andamento" })
@@ -82,14 +92,60 @@ function AnalisandoPage() {
           throw new Error("Inspeção sem fotos. Volte e adicione ao menos 1 foto antes de analisar.");
         }
 
-        const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
-          body: { inspecao_id: id, mode: "preview" },
-        });
-        if (canceladoRef.current) return;
-        if (error) throw error;
-        const resp = data as { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown };
+        const lista: FotoItem[] = fotosRows.map((r) => ({
+          id: r.id as string,
+          legenda: (r.legenda as string | null) ?? null,
+          url: null,
+          status: "pendente",
+        }));
+        setFotos(lista);
+
+        await Promise.all(
+          fotosRows.map(async (r) => {
+            const { data: signed } = await supabase.storage
+              .from("inspection-photos")
+              .createSignedUrl(r.storage_path as string, 600);
+            if (canceladoRef.current) return;
+            setFotos((prev) =>
+              prev.map((f) =>
+                f.id === r.id
+                  ? { ...f, url: signed?.signedUrl ?? null, status: "carregada" }
+                  : f,
+              ),
+            );
+          }),
+        );
+
+        // Marcação progressiva de "enviada" enquanto a IA processa em lote.
+        const passo = Math.max(450, Math.min(1400, Math.round(7000 / lista.length)));
+        let idx = 0;
+        const tickEnvio = setInterval(() => {
+          if (canceladoRef.current || idx >= lista.length) {
+            clearInterval(tickEnvio);
+            return;
+          }
+          marcarStatus(lista[idx].id, "enviada");
+          idx += 1;
+        }, passo);
+
+        type RespIA = { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown };
+        let resp: RespIA | null = null;
+        try {
+          const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
+            body: { inspecao_id: id, mode: "preview" },
+          });
+          if (canceladoRef.current) return;
+          if (error) throw error;
+          resp = data as RespIA;
+        } finally {
+          clearInterval(tickEnvio);
+        }
+
         if (resp?.error) throw new Error(resp.error);
         if (!resp?.preview) throw new Error("Resposta da IA sem preview");
+
+        // Garante que todas aparecem como enviadas ao final.
+        setFotos((prev) => prev.map((f) => ({ ...f, status: "enviada" })));
         setProgresso(100);
         setEtapa(ETAPAS.length - 1);
         try {
@@ -163,6 +219,75 @@ function AnalisandoPage() {
                 <span>{ETAPAS[etapa]}</span>
               </div>
             </div>
+
+            {fotos.length > 0 && (
+              <div className="w-full max-w-sm space-y-2 text-left">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Fotos da inspeção</span>
+                  <span>
+                    {fotos.filter((f) => f.status === "enviada").length}/{fotos.length} enviadas à IA
+                  </span>
+                </div>
+                <ul className="grid grid-cols-3 gap-2">
+                  {fotos.map((f, i) => {
+                    const enviada = f.status === "enviada";
+                    const carregada = f.status === "carregada" || enviada;
+                    return (
+                      <li
+                        key={f.id}
+                        className={cn(
+                          "relative aspect-square overflow-hidden rounded-lg border bg-muted",
+                          enviada && "ring-2 ring-primary",
+                        )}
+                      >
+                        {f.url ? (
+                          <img
+                            src={f.url}
+                            alt={f.legenda ?? `Foto ${i + 1}`}
+                            className={cn(
+                              "h-full w-full object-cover transition-opacity",
+                              !carregada && "opacity-40",
+                            )}
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                            <ImageIcon className="h-5 w-5" />
+                          </div>
+                        )}
+                        <span
+                          className={cn(
+                            "absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] shadow",
+                            enviada
+                              ? "bg-primary text-primary-foreground"
+                              : carregada
+                                ? "bg-card text-foreground"
+                                : "bg-muted text-muted-foreground",
+                          )}
+                          title={
+                            enviada
+                              ? "Enviada para a IA"
+                              : carregada
+                                ? "Carregada"
+                                : "Aguardando"
+                          }
+                        >
+                          {enviada ? (
+                            <Check className="h-3 w-3" />
+                          ) : carregada ? (
+                            <Upload className="h-3 w-3" />
+                          ) : (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
+                        </span>
+                        <span className="absolute inset-x-0 bottom-0 truncate bg-black/45 px-1 py-0.5 text-[10px] text-white">
+                          {enviada ? "Enviada" : carregada ? "Carregada" : "Aguardando"}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
 
             <Button variant="outline" onClick={cancelar} className="mt-2 w-full max-w-sm">
               Cancelar análise
