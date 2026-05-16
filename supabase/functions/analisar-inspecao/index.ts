@@ -55,7 +55,15 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "missing_auth" }, 401);
 
-    let body: { inspecao_id?: string; mode?: "preview" | "save"; analise?: unknown };
+    let body: {
+      inspecao_id?: string;
+      mode?: "preview" | "save";
+      analise?: unknown;
+      degradado?: string | null;
+      degradado_codigo?: string | null;
+      degradado_detalhe?: string | null;
+      fotos_falhadas?: number;
+    };
     try {
       body = await req.json();
     } catch {
@@ -159,8 +167,14 @@ Observação manual: ${inspecao.observacao_manual ?? "—"}
 Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${totalFotos} disponíveis${fotosFalhadas ? ` (${fotosFalhadas} falharam ao carregar)` : ""}`}.`;
 
     // 5. Chamar IA com timeout (somente em modo preview)
+    // aiDegradado: rótulo curto exibido na UI.
+    // aiDegradadoCodigo: categoria estável para diagnóstico/telemetria
+    //   (timeout | rede | http_4xx | http_5xx | resposta_vazia | json_invalido | sem_api_key | erro_desconhecido).
+    // aiDegradadoDetalhe: mensagem/snippet do erro original (até 1000 chars).
     let parsed: AnalysisResult | null = null;
     let aiDegradado: string | null = null;
+    let aiDegradadoCodigo: string | null = null;
+    let aiDegradadoDetalhe: string | null = null;
 
     if (mode === "preview") {
       const ctrl = new AbortController();
@@ -204,6 +218,8 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
           const txt = await safeText(aiResp);
           console.error("AI error", aiResp.status, txt);
           aiDegradado = `IA retornou ${aiResp.status}`;
+          aiDegradadoCodigo = aiResp.status >= 500 ? "http_5xx" : "http_4xx";
+          aiDegradadoDetalhe = `HTTP ${aiResp.status} — ${txt.slice(0, 800)}`;
         } else {
           const aiJson = await aiResp.json().catch((e) => {
             console.error("Falha ao parsear JSON da resposta IA:", e);
@@ -212,6 +228,8 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
           const raw = aiJson?.choices?.[0]?.message?.content;
           if (!raw) {
             aiDegradado = "Resposta da IA vazia";
+            aiDegradadoCodigo = "resposta_vazia";
+            aiDegradadoDetalhe = "Resposta sem choices[0].message.content";
           } else {
             try {
               const obj = typeof raw === "string" ? JSON.parse(raw) : raw;
@@ -219,11 +237,14 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
             } catch (e) {
               console.error("Falha ao parsear conteúdo IA:", e, "raw:", String(raw).slice(0, 500));
               aiDegradado = "Resposta da IA não é JSON válido";
+              aiDegradadoCodigo = "json_invalido";
+              aiDegradadoDetalhe = `${(e as Error)?.message ?? "erro de parse"} — trecho: ${String(raw).slice(0, 500)}`;
             }
           }
         }
       } catch (e) {
         const name = (e as Error)?.name;
+        const msg = (e as Error)?.message ?? String(e);
         const clientAborted = req.signal.aborted || name === "ClientAbortError";
         const timedOut = name === "TimeoutError";
         if (clientAborted) {
@@ -233,6 +254,8 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
         }
         console.error(timedOut ? "Timeout da IA" : "Erro de rede com IA:", e);
         aiDegradado = timedOut ? "Tempo limite da IA excedido" : "Falha de rede com a IA";
+        aiDegradadoCodigo = timedOut ? "timeout" : "rede";
+        aiDegradadoDetalhe = `${name ?? "Error"}: ${msg.slice(0, 800)}`;
       } finally {
         clearTimeout(timer);
         req.signal.removeEventListener("abort", onClientAbort);
@@ -241,6 +264,7 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
       // 6. Fallback heurístico se IA falhou
       if (!parsed) {
         parsed = fallbackHeuristico(checkboxes, semFotos, aiDegradado ?? "IA indisponível");
+        if (!aiDegradadoCodigo) aiDegradadoCodigo = "erro_desconhecido";
       }
 
       // 6b. Retorna preview SEM persistir nada (status_processo permanece em_andamento).
@@ -248,6 +272,8 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
         ok: true,
         preview: parsed,
         degradado: aiDegradado,
+        degradado_codigo: aiDegradadoCodigo,
+        degradado_detalhe: aiDegradadoDetalhe,
         fotos: { total: totalFotos, usadas: imageContents.length, falhadas: fotosFalhadas },
       });
     }
@@ -255,6 +281,12 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
     // === Modo SAVE: normaliza o JSON revisado pelo usuário e persiste ===
     parsed = normalizar(body.analise);
 
+    // Em SAVE, a chamada à IA já ocorreu em preview; recebemos os metadados
+    // de fallback do cliente para preservá-los junto da análise.
+    const saveDegradado = typeof body.degradado === "string" ? body.degradado : null;
+    const saveDegradadoCodigo = typeof body.degradado_codigo === "string" ? body.degradado_codigo : null;
+    const saveDegradadoDetalhe = typeof body.degradado_detalhe === "string" ? body.degradado_detalhe : null;
+    const saveFotosFalhadas = typeof body.fotos_falhadas === "number" ? body.fotos_falhadas : fotosFalhadas;
 
     // 7. Persistir análise
     const { data: analise, error: aErr } = await admin
@@ -262,7 +294,7 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
       .insert({
         organizacao_id: inspecao.organizacao_id,
         inspecao_id,
-        modelo_ia: aiDegradado ? `${MODELO_IA} (fallback)` : MODELO_IA,
+        modelo_ia: saveDegradado ? `${MODELO_IA} (fallback)` : MODELO_IA,
         prompt_versao: PROMPT_VERSAO,
         prompt_system: systemPrompt,
         prompt_user: userText,
@@ -275,7 +307,13 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
         justificativa: parsed.justificativa,
         necessidade_agronomo: parsed.necessidade_agronomo,
         prioridade: parsed.prioridade,
-        resposta_completa: { ...parsed, _degradado: aiDegradado, _fotos_falhadas: fotosFalhadas },
+        resposta_completa: {
+          ...parsed,
+          _degradado: saveDegradado,
+          _degradado_codigo: saveDegradadoCodigo,
+          _degradado_detalhe: saveDegradadoDetalhe,
+          _fotos_falhadas: saveFotosFalhadas,
+        },
       })
       .select()
       .single();
@@ -328,8 +366,10 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
     return json({
       ok: true,
       analise,
-      degradado: aiDegradado,
-      fotos: { total: totalFotos, usadas: imageContents.length, falhadas: fotosFalhadas },
+      degradado: saveDegradado,
+      degradado_codigo: saveDegradadoCodigo,
+      degradado_detalhe: saveDegradadoDetalhe,
+      fotos: { total: totalFotos, usadas: imageContents.length, falhadas: saveFotosFalhadas },
     });
   } catch (e) {
     console.error("Erro inesperado na edge function:", e);
