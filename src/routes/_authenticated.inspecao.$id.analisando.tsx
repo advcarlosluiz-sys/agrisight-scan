@@ -452,6 +452,31 @@ function AnalisandoPage() {
           </>
         )}
       </div>
+
+      <AlertDialog open={confirmarCancelar} onOpenChange={setConfirmarCancelar}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar análise em andamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A análise será interrompida e você voltará para a tela de observações.
+              As fotos e observações já registradas não serão perdidas — você pode
+              iniciar a análise novamente quando quiser.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar análise</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmarCancelar(false);
+                void cancelar();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sim, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
