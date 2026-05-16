@@ -229,15 +229,32 @@ function ResultadoPage() {
         </div>
       )}
 
-      <Button
-        variant="outline"
-        className="mt-6 w-full"
-        onClick={reanalisar}
-        disabled={reanalisando}
-      >
-        <RefreshCw className={`mr-2 h-4 w-4 ${reanalisando ? "animate-spin" : ""}`} />
-        {reanalisando ? "Reiniciando..." : "Reanalisar com IA (reaproveita as fotos)"}
-      </Button>
+      <div className="mt-6 rounded-2xl border bg-card p-4">
+        <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+          <RefreshCw className="h-4 w-4 text-primary" /> Reanalisar com IA
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Atualize o diagnóstico depois de adicionar novas fotos ou ajustar as observações.
+        </p>
+        <Button
+          className="h-11 w-full"
+          onClick={reanalisar}
+          disabled={reanalisando}
+        >
+          <Sparkles className={`mr-2 h-4 w-4 ${reanalisando ? "animate-spin" : ""}`} />
+          {reanalisando ? "Reiniciando..." : "Reanalisar agora (mesmas fotos)"}
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          className="mt-2 h-11 w-full"
+          disabled={reanalisando}
+        >
+          <Link to="/inspecao/$id/observacoes" params={{ id }}>
+            Editar fotos e observações
+          </Link>
+        </Button>
+      </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
         <Button asChild variant="secondary"><Link to="/">Início</Link></Button>
