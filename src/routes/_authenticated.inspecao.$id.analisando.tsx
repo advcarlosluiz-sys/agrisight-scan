@@ -363,8 +363,68 @@ function AnalisandoPage() {
             </div>
             <div className="space-y-1">
               <h2 className="text-xl font-semibold">Falha na análise</h2>
-              <p className="max-w-sm text-sm text-muted-foreground">{erro}</p>
+              <p className="max-w-sm text-sm text-muted-foreground">{erro.mensagem}</p>
             </div>
+
+            <div className="w-full max-w-sm rounded-xl border bg-card text-left">
+              <div className="flex flex-wrap items-center gap-2 px-3 py-2 text-xs">
+                {typeof erro.status === "number" && (
+                  <span className="rounded-full bg-destructive/15 px-2 py-0.5 font-medium text-destructive">
+                    HTTP {erro.status}
+                  </span>
+                )}
+                {erro.codigo && (
+                  <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-muted-foreground">
+                    {erro.codigo}
+                  </span>
+                )}
+                <span className="ml-auto text-muted-foreground">Edge Function</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMostrarDetalhes((v) => !v)}
+                className="flex w-full items-center justify-between border-t px-3 py-2 text-xs font-medium hover:bg-muted"
+              >
+                <span>{mostrarDetalhes ? "Ocultar detalhes" : "Ver detalhes do erro"}</span>
+                {mostrarDetalhes ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </button>
+              {mostrarDetalhes && (
+                <div className="space-y-2 border-t p-3">
+                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted p-2 text-[11px] leading-snug text-foreground">
+                    {erro.contexto || erro.bruto || erro.mensagem}
+                  </pre>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={async () => {
+                      const txt = [
+                        `Mensagem: ${erro.mensagem}`,
+                        erro.status ? `Status: ${erro.status}` : null,
+                        erro.codigo ? `Código: ${erro.codigo}` : null,
+                        erro.contexto ? `Detalhes:\n${erro.contexto}` : null,
+                        erro.bruto ? `Resposta bruta:\n${erro.bruto}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join("\n");
+                      try {
+                        await navigator.clipboard.writeText(txt);
+                        toast.success("Detalhes copiados");
+                      } catch {
+                        toast.error("Não foi possível copiar");
+                      }
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" /> Copiar detalhes
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -372,7 +432,7 @@ function AnalisandoPage() {
               >
                 Voltar
               </Button>
-              <Button onClick={() => window.location.reload()}>Tentar novamente</Button>
+              <Button onClick={() => void executar()}>Tentar novamente</Button>
             </div>
           </>
         )}
