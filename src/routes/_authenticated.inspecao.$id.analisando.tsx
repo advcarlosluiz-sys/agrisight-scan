@@ -97,6 +97,7 @@ function AnalisandoPage() {
   const [etapa, setEtapa] = useState(0);
   const [erro, setErro] = useState<ErroDetalhado | null>(null);
   const [confirmarCancelar, setConfirmarCancelar] = useState(false);
+  const [motivoCancelamento, setMotivoCancelamento] = useState("");
   const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
   const [fotos, setFotos] = useState<FotoItem[]>([]);
   const ranRef = useRef(false);
