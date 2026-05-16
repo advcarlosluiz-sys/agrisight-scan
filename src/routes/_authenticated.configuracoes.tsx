@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   Bell,
@@ -8,12 +8,14 @@ import {
   LogOut,
   MapPin,
   ShieldCheck,
+  UserCheck,
   Wifi,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -66,6 +68,7 @@ function useBrowserPermission(name: PermissionName) {
 function Cfg() {
   const { user, signOut } = useAuth();
   const prefs = usePreferences();
+  const qc = useQueryClient();
 
   const { data: perfil } = useQuery({
     queryKey: ["perfil", user?.id],
@@ -74,7 +77,7 @@ function Cfg() {
       (
         await supabase
           .from("perfis")
-          .select("nome, papel, organizacao_id, organizacao:organizacao_id(id, nome)")
+          .select("nome, papel, organizacao_id, organizacao:organizacao_id(id, nome, agronomo_nome, agronomo_email, agronomo_telefone)")
           .eq("id", user!.id)
           .single()
       ).data,
@@ -155,6 +158,14 @@ function Cfg() {
           </p>
         )}
       </section>
+
+      {/* Agrônomo padrão */}
+      <AgronomoSection
+        orgId={(perfil as any)?.organizacao_id}
+        org={(perfil as any)?.organizacao}
+        canEdit={isAdmin}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["perfil", user?.id] })}
+      />
 
       {/* Preferências de Sincronização */}
       <section className="mt-4 rounded-2xl border bg-card p-4 shadow-card">
@@ -337,5 +348,86 @@ function PermRow({
         {state === "granted" ? "Revisar" : "Permitir"}
       </Button>
     </div>
+  );
+}
+
+function AgronomoSection({
+  orgId,
+  org,
+  canEdit,
+  onSaved,
+}: {
+  orgId?: string;
+  org?: { agronomo_nome?: string | null; agronomo_email?: string | null; agronomo_telefone?: string | null } | null;
+  canEdit: boolean;
+  onSaved: () => void;
+}) {
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [tel, setTel] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setNome(org?.agronomo_nome ?? "");
+    setEmail(org?.agronomo_email ?? "");
+    setTel(org?.agronomo_telefone ?? "");
+  }, [org?.agronomo_nome, org?.agronomo_email, org?.agronomo_telefone]);
+
+  const salvar = async () => {
+    if (!orgId) return;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("E-mail inválido");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from("organizacoes")
+      .update({
+        agronomo_nome: nome.trim() || null,
+        agronomo_email: email.trim() || null,
+        agronomo_telefone: tel.trim() || null,
+      })
+      .eq("id", orgId);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Agrônomo padrão salvo");
+      onSaved();
+    }
+  };
+
+  return (
+    <section className="mt-4 rounded-2xl border bg-card p-4 shadow-card">
+      <div className="flex items-center gap-2">
+        <UserCheck className="h-4 w-4 text-primary" />
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Agrônomo padrão
+        </p>
+      </div>
+      <p className="mt-1 text-[11px] text-muted-foreground">
+        Solicitações abertas nas análises de IA são direcionadas para este contato.
+      </p>
+      <div className="mt-3 space-y-2">
+        <div>
+          <Label className="text-xs">Nome</Label>
+          <Input value={nome} onChange={(e) => setNome(e.target.value)} disabled={!canEdit} maxLength={120} />
+        </div>
+        <div>
+          <Label className="text-xs">E-mail</Label>
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!canEdit} maxLength={160} />
+        </div>
+        <div>
+          <Label className="text-xs">Telefone</Label>
+          <Input value={tel} onChange={(e) => setTel(e.target.value)} disabled={!canEdit} maxLength={40} />
+        </div>
+      </div>
+      {canEdit ? (
+        <Button className="mt-3 w-full" onClick={salvar} disabled={saving || !orgId}>
+          {saving ? "Salvando..." : "Salvar"}
+        </Button>
+      ) : (
+        <p className="mt-3 text-[11px] text-muted-foreground">Apenas administradores podem alterar.</p>
+      )}
+    </section>
   );
 }
