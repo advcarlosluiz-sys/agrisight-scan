@@ -263,6 +263,7 @@ function AnalisandoPage() {
       } catch {
         // ignora — preview ainda pode ser exibida via state se disponível
       }
+      if (canceladoRef.current) return;
       toast.success("Pré-visualização pronta — revise antes de salvar");
       setTimeout(() => {
         if (!canceladoRef.current) navigate({ to: "/inspecao/$id/preview-ia", params: { id } });
