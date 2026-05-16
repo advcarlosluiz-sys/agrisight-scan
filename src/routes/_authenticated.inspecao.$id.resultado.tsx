@@ -124,6 +124,12 @@ function ResultadoPage() {
           <Info label="Risco">{a.risco}</Info>
           <Info label="Prioridade">{a.prioridade}</Info>
         </div>
+        {a.modelo_ia && (
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            Analisado por <span className="font-mono font-medium text-foreground">{a.modelo_ia}</span>
+            {a.created_at ? ` · ${new Date(a.created_at).toLocaleString("pt-BR")}` : ""}
+          </p>
+        )}
       </div>
 
       <Section icon={AlertTriangle} title="Problemas detectados">
