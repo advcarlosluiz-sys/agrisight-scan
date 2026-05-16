@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Camera, AlertTriangle, Info } from "lucide-react";
+import { Loader2, Sparkles, Camera, AlertTriangle, Info, XCircle } from "lucide-react";
 import { StatusProcessoBadge, useStatusProcesso, useRedirectIfAnalisando } from "@/components/status-processo-badge";
 import { useInspecaoFotos } from "@/lib/use-inspecao-fotos";
 import { useOnlineStatus } from "@/lib/use-online";
@@ -35,12 +35,34 @@ function ObsPage() {
   const [nota, setNota] = useState("");
   const [outros, setOutros] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [canceladaEm, setCanceladaEm] = useState<Date | null>(null);
   const lockRef = useRef(false);
   const statusProcesso = useStatusProcesso(id);
   useRedirectIfAnalisando(id);
   const online = useOnlineStatus();
   const fotosInfo = useInspecaoFotos(id);
   const validacao = fotosInfo.validar(online);
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(`analise-cancelada:${id}`);
+      if (v) {
+        const d = new Date(v);
+        if (!Number.isNaN(d.getTime())) setCanceladaEm(d);
+      }
+    } catch {
+      // ignora
+    }
+  }, [id]);
+
+  const dispensarAviso = () => {
+    try {
+      localStorage.removeItem(`analise-cancelada:${id}`);
+    } catch {
+      // ignora
+    }
+    setCanceladaEm(null);
+  };
 
   const analisar = async () => {
     if (lockRef.current || busy) return;
@@ -63,6 +85,11 @@ function ObsPage() {
         .eq("id", id);
       if (uErr) throw uErr;
 
+      try {
+        localStorage.removeItem(`analise-cancelada:${id}`);
+      } catch {
+        // ignora
+      }
       navigate({ to: "/inspecao/$id/analisando", params: { id } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro ao salvar");
@@ -77,6 +104,33 @@ function ObsPage() {
         <span className="text-xs text-muted-foreground">Status da inspeção</span>
         <StatusProcessoBadge status={statusProcesso} />
       </div>
+
+      {canceladaEm ? (
+        <div className="mb-3 rounded-xl border border-destructive/40 bg-destructive/10 p-3">
+          <div className="flex items-start gap-2">
+            <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <div className="flex-1 space-y-1 text-sm">
+              <div className="font-medium text-destructive">Análise cancelada</div>
+              <p className="text-xs text-muted-foreground">
+                Você interrompeu a análise em{" "}
+                {canceladaEm.toLocaleString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                . Revise as observações e inicie novamente quando quiser.
+              </p>
+              <div className="pt-1">
+                <Button size="sm" variant="ghost" onClick={dispensarAviso}>
+                  Dispensar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="space-y-2 rounded-2xl border bg-card p-4">
         {OBS.map(([k, label]) => (
           <label key={k} className="flex items-center gap-3 rounded-lg p-2 active:bg-muted">
