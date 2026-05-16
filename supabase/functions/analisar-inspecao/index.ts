@@ -159,8 +159,14 @@ Observação manual: ${inspecao.observacao_manual ?? "—"}
 Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${totalFotos} disponíveis${fotosFalhadas ? ` (${fotosFalhadas} falharam ao carregar)` : ""}`}.`;
 
     // 5. Chamar IA com timeout (somente em modo preview)
+    // aiDegradado: rótulo curto exibido na UI.
+    // aiDegradadoCodigo: categoria estável para diagnóstico/telemetria
+    //   (timeout | rede | http_4xx | http_5xx | resposta_vazia | json_invalido | sem_api_key | erro_desconhecido).
+    // aiDegradadoDetalhe: mensagem/snippet do erro original (até 1000 chars).
     let parsed: AnalysisResult | null = null;
     let aiDegradado: string | null = null;
+    let aiDegradadoCodigo: string | null = null;
+    let aiDegradadoDetalhe: string | null = null;
 
     if (mode === "preview") {
       const ctrl = new AbortController();
