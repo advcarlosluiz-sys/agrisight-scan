@@ -68,6 +68,7 @@ function useBrowserPermission(name: PermissionName) {
 function Cfg() {
   const { user, signOut } = useAuth();
   const prefs = usePreferences();
+  const qc = useQueryClient();
 
   const { data: perfil } = useQuery({
     queryKey: ["perfil", user?.id],
@@ -76,7 +77,7 @@ function Cfg() {
       (
         await supabase
           .from("perfis")
-          .select("nome, papel, organizacao_id, organizacao:organizacao_id(id, nome)")
+          .select("nome, papel, organizacao_id, organizacao:organizacao_id(id, nome, agronomo_nome, agronomo_email, agronomo_telefone)")
           .eq("id", user!.id)
           .single()
       ).data,
