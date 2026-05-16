@@ -366,8 +366,10 @@ Fotos: ${totalFotos === 0 ? "nenhuma fornecida" : `${imageContents.length}/${tot
     return json({
       ok: true,
       analise,
-      degradado: aiDegradado,
-      fotos: { total: totalFotos, usadas: imageContents.length, falhadas: fotosFalhadas },
+      degradado: saveDegradado,
+      degradado_codigo: saveDegradadoCodigo,
+      degradado_detalhe: saveDegradadoDetalhe,
+      fotos: { total: totalFotos, usadas: imageContents.length, falhadas: saveFotosFalhadas },
     });
   } catch (e) {
     console.error("Erro inesperado na edge function:", e);
