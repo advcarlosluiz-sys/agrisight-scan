@@ -159,6 +159,71 @@ export async function processQueue() {
   }
 }
 
+export interface SyncResult {
+  enviados: number;
+  falhas: number;
+  restantes: number;
+}
+
+/**
+ * Força sincronização imediata (ignora backoff) e retorna o resultado agregado.
+ * Útil para o botão "Sincronizar agora" com feedback ao usuário.
+ */
+export async function syncNow(): Promise<SyncResult> {
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    throw new Error("Sem conexão com a internet");
+  }
+  // espera processamento atual terminar
+  while (processing) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  // reagenda todos os pendentes para agora (ignora backoff)
+  const all = await offlineDB.pendingPhotos.where("status").notEqual("enviando").toArray();
+  await offlineDB.pendingPhotos.bulkPut(
+    all.map((p) => ({
+      ...p,
+      status: "pendente" as const,
+      next_attempt_at: Date.now(),
+      last_error: undefined,
+    })),
+  );
+
+  let enviados = 0;
+  let falhas = 0;
+  processing = true;
+  emit();
+  try {
+    while (true) {
+      const next = await offlineDB.pendingPhotos.where("status").equals("pendente").first();
+      if (!next) break;
+      await offlineDB.pendingPhotos.update(next.id, { status: "enviando", last_error: undefined });
+      try {
+        await uploadOne(next);
+        await offlineDB.pendingPhotos.delete(next.id);
+        enviados++;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Falha no envio";
+        const attempts = next.attempts + 1;
+        await offlineDB.pendingPhotos.update(next.id, {
+          status: attempts >= MAX_ATTEMPTS ? "erro" : "pendente",
+          attempts,
+          last_error: msg,
+          next_attempt_at:
+            attempts >= MAX_ATTEMPTS
+              ? Date.now()
+              : Date.now() + BACKOFFS[Math.min(attempts - 1, BACKOFFS.length - 1)],
+        });
+        falhas++;
+      }
+    }
+  } finally {
+    processing = false;
+    emit();
+  }
+  const restantes = await offlineDB.pendingPhotos.count();
+  return { enviados, falhas, restantes };
+}
+
 let initialized = false;
 export function initSyncQueue() {
   if (initialized || typeof window === "undefined") return;
