@@ -76,13 +76,15 @@ function AnalisandoPage() {
             .eq("id", id);
         }
 
-        // Salvaguarda: bloqueia análise sem fotos persistidas
-        const { count, error: countErr } = await supabase
+        // Carrega lista de fotos da inspeção e gera URLs assinadas em paralelo,
+        // marcando cada uma como "carregada" assim que sua URL fica disponível.
+        const { data: fotosRows, error: fotosErr } = await supabase
           .from("fotos_inspecao")
-          .select("id", { count: "exact", head: true })
-          .eq("inspecao_id", id);
-        if (countErr) throw countErr;
-        if (!count || count < 1) {
+          .select("id, legenda, storage_path, created_at")
+          .eq("inspecao_id", id)
+          .order("created_at", { ascending: true });
+        if (fotosErr) throw fotosErr;
+        if (!fotosRows || fotosRows.length < 1) {
           await supabase
             .from("inspecoes")
             .update({ status_processo: "em_andamento" })
@@ -90,14 +92,59 @@ function AnalisandoPage() {
           throw new Error("Inspeção sem fotos. Volte e adicione ao menos 1 foto antes de analisar.");
         }
 
-        const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
-          body: { inspecao_id: id, mode: "preview" },
-        });
-        if (canceladoRef.current) return;
-        if (error) throw error;
-        const resp = data as { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown };
+        const lista: FotoItem[] = fotosRows.map((r) => ({
+          id: r.id as string,
+          legenda: (r.legenda as string | null) ?? null,
+          url: null,
+          status: "pendente",
+        }));
+        setFotos(lista);
+
+        await Promise.all(
+          fotosRows.map(async (r) => {
+            const { data: signed } = await supabase.storage
+              .from("inspection-photos")
+              .createSignedUrl(r.storage_path as string, 600);
+            if (canceladoRef.current) return;
+            setFotos((prev) =>
+              prev.map((f) =>
+                f.id === r.id
+                  ? { ...f, url: signed?.signedUrl ?? null, status: "carregada" }
+                  : f,
+              ),
+            );
+          }),
+        );
+
+        // Marcação progressiva de "enviada" enquanto a IA processa em lote.
+        const passo = Math.max(450, Math.min(1400, Math.round(7000 / lista.length)));
+        let idx = 0;
+        const tickEnvio = setInterval(() => {
+          if (canceladoRef.current || idx >= lista.length) {
+            clearInterval(tickEnvio);
+            return;
+          }
+          marcarStatus(lista[idx].id, "enviada");
+          idx += 1;
+        }, passo);
+
+        let resp: { error?: string; preview?: unknown; degradado?: string | null; fotos?: unknown } | null = null;
+        try {
+          const { data, error } = await supabase.functions.invoke("analisar-inspecao", {
+            body: { inspecao_id: id, mode: "preview" },
+          });
+          if (canceladoRef.current) return;
+          if (error) throw error;
+          resp = data as typeof resp;
+        } finally {
+          clearInterval(tickEnvio);
+        }
+
         if (resp?.error) throw new Error(resp.error);
         if (!resp?.preview) throw new Error("Resposta da IA sem preview");
+
+        // Garante que todas aparecem como enviadas ao final.
+        setFotos((prev) => prev.map((f) => ({ ...f, status: "enviada" })));
         setProgresso(100);
         setEtapa(ETAPAS.length - 1);
         try {
